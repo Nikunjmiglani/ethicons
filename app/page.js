@@ -173,7 +173,7 @@ export default function HomePage() {
           transparency.
         </p>
         <motion.div whileHover={{ scale: 1.05 }}>
-          <Link href="/lookup">
+          <Link href="/importt">
             <button className="bg-green-600 text-white px-6 py-3 rounded-full font-medium hover:bg-green-700 transition">
               Add Your Herb
             </button>
