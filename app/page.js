@@ -13,14 +13,7 @@ export default function HomePage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // 🚫 Disable right click
-  useEffect(() => {
-    const handleContextMenu = (e) => e.preventDefault();
-    document.addEventListener("contextmenu", handleContextMenu);
-    return () => {
-      document.removeEventListener("contextmenu", handleContextMenu);
-    };
-  }, []);
+
 
   function handleCheckNow() {
     if (!session) {
@@ -54,7 +47,7 @@ export default function HomePage() {
             <Link href="/lookup">
               <button className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-full font-medium hover:bg-green-700 transition hover:scale-105">
                 <FiSearch className="text-xl" />
-                <span>Search for your Herb</span>
+                <span>Track your Herb</span>
               </button>
             </Link>
             <button

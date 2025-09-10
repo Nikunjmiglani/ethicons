@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 export default function VisionPage() {
   return (
     
-    <div className="min-h-screen bg-gradient-to-br mt-7 from-green-50 to-green-100 text-gray-800 flex flex-col items-center py-12 px-6">
+    <div className="min-h-screen bg-gradient-to-br  from-green-50 to-green-100 text-gray-800 flex flex-col items-center py-12 px-6">
       <div className="w-full max-w-4xl space-y-12">
         {/* Header */}
         <div className="text-center space-y-4">

@@ -38,7 +38,7 @@ export default function LookupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br mt-7 from-green-50 to-green-100 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg bg-white shadow-lg rounded-2xl p-8 border border-green-200">
         <h1 className="text-2xl font-bold text-green-800 text-center mb-6">
           🌿 Lookup Herb by ID
