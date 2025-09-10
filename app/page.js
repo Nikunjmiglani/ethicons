@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // 🚫 Disable right click everywhere
+  useEffect(() => {
+    const handleContextMenu = (e) => e.preventDefault();
+    document.addEventListener("contextmenu", handleContextMenu);
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, []);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-white dark:bg-gray-900">
@@ -17,7 +26,7 @@ export default function HomePage() {
         loop
         playsInline
         preload="auto"
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        className="absolute top-0 left-0 w-full h-full object-cover z-0 pointer-events-none"
       />
 
       {/* Overlay Content */}
