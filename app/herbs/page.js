@@ -2,7 +2,7 @@
 
 export default function HerbsPage() {
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-b from-green-950 to-green-800 text-white font-sans">
+    <div className="relative w-full mt-7 min-h-screen bg-gradient-to-b from-green-950 to-green-800 text-white font-sans">
       {/* Container */}
       <div className="max-w-6xl mx-auto px-6 py-16">
         {/* Heading */}
