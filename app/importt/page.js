@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // 👈 for redirect
 import { getContract } from "@/lib/contract";
 import { QRCodeCanvas } from "qrcode.react";
 
 export default function ImportPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [otherHerb, setOtherHerb] = useState("");
   const [geo, setGeo] = useState("");
@@ -88,6 +90,13 @@ export default function ImportPage() {
     setTimeout(() => {
       setProgress(3);
       setReportReady(true);
+    }, 5000);
+  }
+
+  function handleReportDownload() {
+    // After clicking download, wait 5s then redirect
+    setTimeout(() => {
+      router.push("/storage");
     }, 5000);
   }
 
@@ -204,10 +213,14 @@ export default function ImportPage() {
                     <a
                       href="/dummy-test-report.pdf"
                       download
+                      onClick={handleReportDownload}
                       className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
                     >
                       ⬇ Download Test Report
                     </a>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Redirecting to storage page in 5 seconds after download...
+                    </p>
                   </div>
                 )}
               </>

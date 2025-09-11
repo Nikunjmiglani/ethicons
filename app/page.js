@@ -138,11 +138,11 @@ export default function HomePage() {
       </section>
 
       {/* Workflow Section */}
-      <section className="py-16 bg-green-50 dark:bg-green-900 text-center px-6">
-        <h2 className="text-3xl font-bold mb-8 text-green-800 dark:text-green-300">
+      <section className="py-16 bg-gray-100 dark:bg-gray-800   text-center px-6">
+        <h2 className="text-3xl  font-bold mb-8  text-green-800 dark:text-green-300">
           How It Works
         </h2>
-        <div className="flex flex-col md:flex-row justify-center items-center gap-8 max-w-5xl mx-auto">
+        <div className="flex flex-col text-white md:flex-row justify-center items-center gap-8 max-w-5xl mx-auto">
           {["Collector", "Processor", "Packager", "Consumer"].map((step, i) => (
             <motion.div
               key={i}
@@ -150,7 +150,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: i * 0.2 }}
               viewport={{ once: true }}
-              className="flex flex-col items-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md w-60 hover:scale-105 transition"
+              className="flex flex-col items-center bg-white dark:bg-gray-900  p-6 rounded-lg shadow-md w-60 hover:scale-105 transition"
             >
               <span className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">
                 {i + 1}
@@ -167,9 +167,9 @@ export default function HomePage() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
-        className="py-16 bg-gray-100 dark:bg-gray-800 text-center px-6"
+        className="py-16 bg-white dark:bg-gray-900 text-center px-6"
       >
-        <h2 className="text-3xl font-bold mb-6 text-green-700 dark:text-green-400">
+        <h2 className="text-3xl font-bold mb-6 text-green-700 ">
           Start Your Journey
         </h2>
         <p className="max-w-2xl mx-auto text-gray-700 dark:text-gray-300 mb-6">
