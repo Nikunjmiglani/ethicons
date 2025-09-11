@@ -9,6 +9,8 @@ export default function ImportPage() {
   const [geo, setGeo] = useState("");
   const [message, setMessage] = useState("");
   const [herbId, setHerbId] = useState("");
+  const [progress, setProgress] = useState(0); // track herb journey
+  const [reportReady, setReportReady] = useState(false);
 
   const predefinedHerbs = [
     "Tulsi", "Ashwagandha", "Aloe Vera", "Neem", "Turmeric", "Ginger",
@@ -68,10 +70,25 @@ export default function ImportPage() {
       setName("");
       setOtherHerb("");
       setGeo("");
+
+      // trigger progress simulation
+      setProgress(1);
+      setReportReady(false);
+      simulateProgress();
     } catch (err) {
       console.error("Error details:", err);
       setMessage("❌ Error collecting herb: " + (err?.reason || err?.message));
     }
+  }
+
+  function simulateProgress() {
+    // step 1 -> sent for testing
+    setTimeout(() => setProgress(2), 2000);
+    // step 2 -> report ready
+    setTimeout(() => {
+      setProgress(3);
+      setReportReady(true);
+    }, 5000);
   }
 
   return (
@@ -133,7 +150,7 @@ export default function ImportPage() {
         </div>
 
         {message && (
-          <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow">
+          <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow space-y-4">
             <p className="text-lg">{message}</p>
             {herbId && (
               <>
@@ -153,6 +170,46 @@ export default function ImportPage() {
                 <p className="mt-2 text-sm text-gray-600">
                   📱 Scan this QR to retrieve herb details later
                 </p>
+
+                {/* Progress bar */}
+                {progress > 0 && (
+                  <div className="mt-6">
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className={`h-3 rounded-full ${
+                          progress === 1
+                            ? "bg-yellow-500 w-1/3"
+                            : progress === 2
+                            ? "bg-blue-500 w-2/3"
+                            : "bg-green-600 w-full"
+                        } transition-all duration-700`}
+                      ></div>
+                    </div>
+
+                    <div className="flex justify-between text-sm mt-2 text-gray-700">
+                      <span>✔ Submitted</span>
+                      <span>
+                        {progress >= 2 ? "✔ Sent for Testing" : "⏳ Testing"}
+                      </span>
+                      <span>
+                        {progress === 3 ? "✔ Report Ready" : "⏳ Report"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Download button */}
+                {reportReady && (
+                  <div className="mt-6">
+                    <a
+                      href="/dummy-test-report.pdf"
+                      download
+                      className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+                    >
+                      ⬇ Download Test Report
+                    </a>
+                  </div>
+                )}
               </>
             )}
           </div>

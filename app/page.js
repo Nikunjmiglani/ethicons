@@ -25,15 +25,19 @@ export default function HomePage() {
     <div className="relative w-full bg-white dark:bg-gray-900">
       {/* Hero Section */}
       <div className="relative w-full h-screen overflow-hidden">
-       <video
+      <video
   src="/api/video"
   autoPlay
   muted
   loop
   playsInline
   preload="auto"
+  webkit-playsinline="true"
+  x-webkit-airplay="true"
+  disablePictureInPicture
   className="absolute top-0 left-0 w-full h-full object-cover z-0 pointer-events-none"
 />
+
 
         <motion.div
           initial={{ opacity: 0, y: 50 }}
