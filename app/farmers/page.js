@@ -1,5 +1,4 @@
 "use client";
-import { Card, CardContent } from "@/components/ui/card";
 
 const herbs = [
   {
@@ -55,23 +54,55 @@ const herbs = [
 
 export default function FarmersPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 p-8">
-      <h1 className="text-4xl font-extrabold text-green-800 text-center mb-10">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-12 px-6">
+      {/* Page Heading */}
+      <h1 className="text-4xl md:text-5xl font-extrabold text-green-800 text-center mb-12 drop-shadow-sm">
         🌿 Farmer’s Guide to Herbal Cultivation
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Herbs Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
         {herbs.map((herb, idx) => (
-          <Card key={idx} className="shadow-md rounded-2xl border border-green-200">
-            <CardContent className="p-6 space-y-3">
-              <h2 className="text-2xl font-bold text-green-700">{herb.name}</h2>
-              <p><span className="font-semibold">🌱 Soil:</span> {herb.soil}</p>
-              <p><span className="font-semibold">🌿 Fertilizers:</span> {herb.fertilizers}</p>
-              <p><span className="font-semibold">🐛 Pesticides:</span> {herb.pesticides}</p>
-              <p><span className="font-semibold">👨‍🌾 Practices:</span> {herb.practices}</p>
-            </CardContent>
-          </Card>
+          <div
+            key={idx}
+            className="bg-white rounded-2xl shadow-md border border-green-200 hover:shadow-xl transition transform hover:-translate-y-1"
+          >
+            <div className="p-6 space-y-4">
+              <h2 className="text-2xl font-bold text-green-700 text-center">
+                {herb.name}
+              </h2>
+              <div className="space-y-2 text-gray-700 text-sm leading-relaxed">
+                <p>
+                  <span className="font-semibold text-green-800">🌱 Soil:</span>{" "}
+                  {herb.soil}
+                </p>
+                <p>
+                  <span className="font-semibold text-green-800">
+                    🌿 Fertilizers:
+                  </span>{" "}
+                  {herb.fertilizers}
+                </p>
+                <p>
+                  <span className="font-semibold text-green-800">
+                    🐛 Pesticides:
+                  </span>{" "}
+                  {herb.pesticides}
+                </p>
+                <p>
+                  <span className="font-semibold text-green-800">
+                    👨‍🌾 Practices:
+                  </span>{" "}
+                  {herb.practices}
+                </p>
+              </div>
+            </div>
+          </div>
         ))}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center mt-16 text-gray-600 text-sm">
+        © 2025 Farmer’s Herbal Guide – Empowering Sustainable Agriculture 🌾
       </div>
     </div>
   );
