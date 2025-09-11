@@ -5,34 +5,40 @@ import Image from "next/image";
 export default function DevelopersPage() {
   const developers = [
     {
-      name: "Nikunj Miglani",
-      role: "Web Developer, Blockchain",
-      bio: "Designs the blockchain infrastructure ensuring security, scalability, and immutability for herb traceability.",
-      image: "/dev1.jpg",
+      name: "Ayush Gupta",
+      role: "Team Lead, Android & IOS Dev",
+      bio: "Designs the Andriod and IOS infrastructure ensuring security, scalability, and immutability for herb traceability.",
+      image: "/imgdev6.jpg",
     },
     {
-      name: "Ayush Gupta",
-      role: "Blockchain, Backend ",
-      bio: "Builds the user interface and backend services that connect farmers, manufacturers, and consumers.",
-      image: "/dev2.jpg",
+      name: "Nikunj Miglani",
+      role: "Blockchain, Web Dev",
+      bio: "Blockchain & Full-Stack Developer, I built secure dApp, smart contracts, and full-stack web app with Next.js, Tailwind, Ethereum and Geo-Tagging.",
+      image: "/imgdev.jpg",
     },
     {
       name: "Sushant Bhardwaj",
       role: "Blockchain",
-      bio: "Works on geo-tagging, analytics, and predictive models to enhance supply chain insights.",
-      image: "/dev3.jpg",
+      bio: "Blockchain Developer specializing in building secure, transparent, and tamper-proof traceability systems.",
+      image: "/imgdev5.jpg",
     },
     {
       name: "Arpita Singh Baghel",
       role: "UI/UX Designer",
-      bio: "Crafts intuitive and beautiful interfaces for seamless interaction across devices.",
-      image: "/dev4.jpg",
+      bio: "Bridging technology and people through design that speaks simplicity.",
+      image: "/imgdev4.jpg",
     },
     {
       name: "Prabhuji Mishra",
       role: "Research",
-      bio: "Develops smart contracts that automate verification and trust across the Ayurvedic herb ecosystem.",
-      image: "/dev5.jpg",
+      bio: "Experienced in data-driven research, A result-oriented management enthusiast skilled in project planning, team coordination, and strategic implementation.",
+      image: "/imgdev1.jpg",
+    },
+    {
+      name: "Bibekpreet Singh Chugh",
+      role: "Research, Devops",
+      bio: "Focused on tech research, CI/CD pipelines, cloud deployment, and scalable infrastructure.",
+      image: "/imgdev2.jpg",
     },
   ];
 

@@ -38,10 +38,28 @@ export default function ImportPage() {
 
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
+            {
+              headers: {
+                "User-Agent": "ayurvedic-traceability-demo/1.0 (contact@example.com)",
+                "Accept": "application/json",
+              },
+            }
           );
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          const place = data.display_name || `${lat}, ${lon}`;
+          console.log("Nominatim response:", data);
+
+          // Try best options
+          let place =
+            data.display_name ||
+            data?.address?.city ||
+            data?.address?.town ||
+            data?.address?.village ||
+            data?.address?.state ||
+            `${lat}, ${lon}`;
+
           setGeo(place);
           setMessage("✅ Location fetched: " + place);
         } catch (err) {
@@ -167,14 +185,14 @@ export default function ImportPage() {
                   🆔 Herb ID: <span className="font-mono">{herbId}</span>
                 </p>
                 <div className="mt-4 flex justify-center">
-                  <QRCodeCanvas
-                    value={herbId}
-                    size={150}
-                    bgColor="#ffffff"
-                    fgColor="#166534"
-                    level="H"
-                    includeMargin={true}
-                  />
+                <QRCodeCanvas
+value={JSON.stringify(herbData)} size={160}
+  bgColor="#ffffff"
+  fgColor="#166534"
+  level="H"
+  includeMargin={true}
+/>
+
                 </div>
                 <p className="mt-2 text-sm text-gray-600">
                   📱 Scan this QR to retrieve herb details later
@@ -211,7 +229,7 @@ export default function ImportPage() {
                 {reportReady && (
                   <div className="mt-6">
                     <a
-                      href="/dummy-test-report.pdf"
+                      href="/soil_testing_report.pdf"
                       download
                       onClick={handleReportDownload}
                       className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"

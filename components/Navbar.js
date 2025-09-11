@@ -38,6 +38,10 @@ export default function Navbar() {
         <Link href="/vision" className="hover:scale-110 transition-transform">
           Our Vision
         </Link>
+        <Link href="/farmers" className="hover:scale-110 transition-transform">
+          For Farmer
+        </Link>
+        
       </div>
 
       {/* Logos (hidden on mobile) */}
@@ -97,6 +101,13 @@ export default function Navbar() {
             onClick={() => setMenuOpen(false)}
           >
             Our Vision
+          </Link>
+          <Link
+            href="/farmers"
+            className="text-lg font-medium hover:scale-110 transition-transform"
+            onClick={() => setMenuOpen(false)}
+          >
+            For Farmer
           </Link>
         </div>
       )}

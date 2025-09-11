@@ -136,6 +136,29 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+      {/* Video Section */}
+{/* Video Section */}
+{/* Video Section */}
+<section className="py-1 mb-10 px-6 bg-white dark:bg-gray-900">
+  <h2 className="text-3xl font-bold text-center mb-8 text-green-700 dark:text-green-400">
+    Glimpse of Testing
+  </h2>
+  <div className="max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-lg">
+    <video
+      src="/video1.mp4"
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      disablePictureInPicture
+      className="w-full h-64 object-cover"
+    />
+  </div>
+</section>
+
+
+
 
       {/* Workflow Section */}
       <section className="py-16 bg-gray-100 dark:bg-gray-800   text-center px-6">

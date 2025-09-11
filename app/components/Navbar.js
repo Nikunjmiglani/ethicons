@@ -38,6 +38,7 @@ export default function Navbar() {
         <Link href="/vision" className="hover:scale-110 transition-transform">
           Our Vision
         </Link>
+        
       </div>
 
       {/* Logos (hidden on mobile) */}
