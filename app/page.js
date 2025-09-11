@@ -45,7 +45,7 @@ export default function HomePage() {
           transition={{ duration: 1 }}
           className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4 space-y-4 text-white"
         >
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold drop-shadow-lg">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-mono drop-shadow-lg">
             Welcome to Ethicons
           </h1>
           <p className="text-base sm:text-lg md:text-2xl max-w-2xl drop-shadow-lg text-gray-100">
@@ -54,7 +54,7 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center gap-4 mt-4">
             <motion.div whileHover={{ scale: 1.05 }}>
               <Link href="/lookup">
-                <button className="flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-full font-medium hover:bg-green-700 transition">
+                <button className="flex items-center space-x-2 bg-lime-900 text-white px-6 py-3 rounded-full font-medium hover:bg-green-700 transition">
                   <FiSearch className="text-xl" />
                   <span>Track your Herb</span>
                 </button>
@@ -63,7 +63,7 @@ export default function HomePage() {
             <motion.div whileHover={{ scale: 1.1 }} animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
               <button
                 onClick={handleCheckNow}
-                className="bg-white text-black dark:bg-gray-200 dark:text-black mt-2 px-5 py-2 rounded-full cursor-pointer font-medium hover:bg-gray-300 dark:hover:bg-gray-400"
+                className="bg-gray-400 text-black dark:bg-gray-200 dark:text-black mt-2 px-5 py-2 rounded-full cursor-pointer font-medium hover:bg-gray-300 dark:hover:bg-gray-400"
               >
                 Check Now!
               </button>
@@ -125,7 +125,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.2 }}
               viewport={{ once: true }}
-              className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl shadow hover:scale-105 transition"
+              className="bg-gray-50 dark:bg-gray-800 text-white p-6 rounded-xl shadow hover:scale-105 transition"
             >
               <div className="text-green-600 dark:text-green-400 mb-4 flex justify-center">
                 {f.icon}
@@ -150,7 +150,7 @@ export default function HomePage() {
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: i * 0.2 }}
               viewport={{ once: true }}
-              className="flex flex-col items-center bg-white dark:bg-gray-900  p-6 rounded-lg shadow-md w-60 hover:scale-105 transition"
+              className="flex flex-col items-center bg-white dark:bg-gray-900  p-6 rounded-full shadow-md w-60 hover:scale-105 transition"
             >
               <span className="text-2xl font-bold text-green-700 dark:text-green-400 mb-2">
                 {i + 1}

@@ -11,7 +11,7 @@ export default function Navbar() {
     <nav
       className="
         relative w-full z-50
-        bg-black/90 backdrop-blur-sm
+        bg-black/80 backdrop-blur-xs
         text-white
         flex items-center justify-between
         px-6 h-16
