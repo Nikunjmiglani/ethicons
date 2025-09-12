@@ -6,7 +6,7 @@ export default function AboutPage() {
       {/* Container */}
       <div className="max-w-5xl mx-auto px-6 py-16">
         {/* Heading */}
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center drop-shadow-md">
+        <h1 className="text-4xl md:text-5xl mt-10 font-bold mb-6 text-center drop-shadow-md">
           About Ethicons
         </h1>
 
