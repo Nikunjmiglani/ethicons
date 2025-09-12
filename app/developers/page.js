@@ -47,7 +47,7 @@ export default function DevelopersPage() {
       {/* Container */}
       <div className="max-w-6xl mx-auto px-6 py-16">
         {/* Heading */}
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center drop-shadow-md">
+        <h1 className="text-4xl mt-15 md:text-5xl font-bold mb-6 text-center drop-shadow-md">
           Meet Our Developers
         </h1>
         <p className="text-lg text-gray-300 text-center mb-12 max-w-3xl mx-auto">

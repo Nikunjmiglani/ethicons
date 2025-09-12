@@ -6,7 +6,7 @@ export default function HerbsPage() {
       {/* Container */}
       <div className="max-w-6xl mx-auto px-6 py-16">
         {/* Heading */}
-        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center drop-shadow-md">
+        <h1 className="text-4xl md:text-5xl font-bold mb-6 mt-15 text-center drop-shadow-md">
           Ayurvedic Herbs & Collection Process
         </h1>
 

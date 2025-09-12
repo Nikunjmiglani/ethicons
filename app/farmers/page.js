@@ -56,7 +56,7 @@ export default function FarmersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-12 px-6">
       {/* Page Heading */}
-      <h1 className="text-4xl md:text-5xl font-extrabold text-green-800 text-center mb-12 drop-shadow-sm">
+      <h1 className="text-4xl mt-15 md:text-5xl font-extrabold text-green-800 text-center mb-12 drop-shadow-sm">
         🌿 Farmer’s Guide to Herbal Cultivation
       </h1>
 

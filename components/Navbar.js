@@ -1,116 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const navLinks = [
+    { name: "About", href: "/about" },
+    { name: "Developers", href: "/developers" },
+    { name: "For Farmer", href: "/farmers" },
+    { name: "Herbs", href: "/herbs" },
+    { name: "Our Vision", href: "/vision" },
+  ];
 
   return (
-    <nav
-      className="
-        relative w-full z-50
-        bg-black/80 backdrop-blur-xs
-        text-white
-        flex items-center justify-between
-        px-6 h-16
-      "
-    >
-      {/* Logo */}
-      <Link href="/" className="flex-1">
-        <span className="font-bold text-xl sm:text-2xl font-mono hover:scale-110 transition-transform duration-200 cursor-pointer">
-          ETHICONS
-        </span>
-      </Link>
+    <>
+      <motion.nav
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl"
+      >
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-full shadow-2xl bg-gray-900/30 backdrop-blur-lg border border-white/10">
+          {/* Logo */}
+          <a href="/" className="flex items-center flex-shrink-0">
+            <span className="font-mono text-green-100 text-2xl sm:text-3xl font-bold">
+              AyuTrace
+            </span>
+          </a>
 
-      {/* Desktop Nav */}
-      <div className="hidden md:flex flex-2 justify-center space-x-10 font-medium">
-        <Link href="/about" className="hover:scale-110 transition-transform">
-          About
-        </Link>
-        <Link href="/developers" className="hover:scale-110 transition-transform">
-          Developers
-        </Link>
-        <Link href="/herbs" className="hover:scale-110 transition-transform">
-          Herbs
-        </Link>
-        <Link href="/vision" className="hover:scale-110 transition-transform">
-          Our Vision
-        </Link>
-        <Link href="/farmers" className="hover:scale-110 transition-transform">
-          For Farmer
-        </Link>
-        
-      </div>
+          {/* Desktop Nav */}
+          <ul className="hidden md:flex items-center gap-1 bg-black/20 p-1 py-2 rounded-full">
+            {navLinks.map((link) => (
+              <li key={link.name}>
+                <a
+                  href={link.href}
+                  className="px-4 py-1 text-sm font-medium rounded-full text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-300"
+                >
+                  {link.name}
+                </a>
+              </li>
+            ))}
+          </ul>
 
-      {/* Logos (hidden on mobile) */}
-      <div className="hidden md:flex flex-1 justify-end space-x-4 sm:space-x-6">
-        <Image src="/srm.webp" alt="Logo 1" width={40} height={40} className="rounded-full" />
-        <Image src="/sih.webp" alt="Logo 2" width={40} height={40} className="rounded-full" />
-      </div>
+          {/* Right Logos & Mobile Menu Button */}
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Logos */}
+            <div className="flex gap-2 sm:gap-3">
+              <img src="sih.webp" className="w-8 sm:w-9" alt="SIH" />
+              <img src="srm.webp" className="w-8 sm:w-9" alt="SRM" />
+            </div>
 
-      {/* Mobile Menu Toggle */}
-      <div className="md:hidden">
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center space-x-1 text-sm font-medium focus:outline-none"
-        >
-          <span>Menu</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className={`h-5 w-5 transform transition-transform duration-300 ${
-              menuOpen ? "rotate-180" : "rotate-0"
-            }`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Mobile Dropdown */}
-      {menuOpen && (
-        <div className="absolute top-16 left-0 w-full bg-black/90 backdrop-blur-sm flex flex-col items-center space-y-6 py-6 md:hidden z-40">
-          <Link
-            href="/about"
-            className="text-lg font-medium hover:scale-110 transition-transform"
-            onClick={() => setMenuOpen(false)}
-          >
-            About
-          </Link>
-          <Link
-            href="/developers"
-            className="text-lg font-medium hover:scale-110 transition-transform"
-            onClick={() => setMenuOpen(false)}
-          >
-            Developers
-          </Link>
-          <Link
-            href="/herbs"
-            className="text-lg font-medium hover:scale-110 transition-transform"
-            onClick={() => setMenuOpen(false)}
-          >
-            Herbs
-          </Link>
-          <Link
-            href="/vision"
-            className="text-lg font-medium hover:scale-110 transition-transform"
-            onClick={() => setMenuOpen(false)}
-          >
-            Our Vision
-          </Link>
-          <Link
-            href="/farmers"
-            className="text-lg font-medium hover:scale-110 transition-transform"
-            onClick={() => setMenuOpen(false)}
-          >
-            For Farmer
-          </Link>
+            {/* Mobile Menu Trigger */}
+            <button
+              className="md:hidden text-white p-1"
+              onClick={() => setIsOpen(true)}
+            >
+              <Menu className="w-7 h-7" />
+            </button>
+          </div>
         </div>
-      )}
-    </nav>
+      </motion.nav>
+
+      {/* Mobile Menu Overlay */}
+      <div
+        className={`fixed inset-0 z-40 backdrop-blur-sm md:hidden transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setIsOpen(false)}
+      />
+
+      {/* Mobile Menu Panel */}
+      <motion.div
+        initial={{ x: "100%" }}
+        animate={{ x: isOpen ? 0 : "100%" }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="fixed top-0 right-0 h-full w-64 bg-white p-8 z-50 md:hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setIsOpen(false)}
+          className="absolute top-6 right-6 text-white"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <ul className="flex flex-col gap-6 mt-5 text-center">
+          {navLinks.map((link) => (
+            <li key={link.name}>
+              <a
+                href={link.href}
+                onClick={() => setIsOpen(false)}
+                className="text-xl font-medium sm:text-xl  text-green-600 transition-colors"
+              >
+                {link.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </motion.div>
+    </>
   );
 }

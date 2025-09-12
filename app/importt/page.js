@@ -51,7 +51,6 @@ export default function ImportPage() {
           const data = await res.json();
           console.log("Nominatim response:", data);
 
-          // Try best options
           let place =
             data.display_name ||
             data?.address?.city ||
@@ -91,7 +90,6 @@ export default function ImportPage() {
       setOtherHerb("");
       setGeo("");
 
-      // trigger progress simulation
       setProgress(1);
       setReportReady(false);
       simulateProgress();
@@ -102,9 +100,7 @@ export default function ImportPage() {
   }
 
   function simulateProgress() {
-    // step 1 -> sent for testing
     setTimeout(() => setProgress(2), 2000);
-    // step 2 -> report ready
     setTimeout(() => {
       setProgress(3);
       setReportReady(true);
@@ -112,7 +108,6 @@ export default function ImportPage() {
   }
 
   function handleReportDownload() {
-    // After clicking download, wait 5s then redirect
     setTimeout(() => {
       router.push("/storage");
     }, 5000);
@@ -185,20 +180,23 @@ export default function ImportPage() {
                   🆔 Herb ID: <span className="font-mono">{herbId}</span>
                 </p>
                 <div className="mt-4 flex justify-center">
-                <QRCodeCanvas
-value={JSON.stringify(herbData)} size={160}
-  bgColor="#ffffff"
-  fgColor="#166534"
-  level="H"
-  includeMargin={true}
-/>
-
+                  <QRCodeCanvas
+                    value={JSON.stringify({
+                      id: herbId,
+                      name: name === "Other" ? otherHerb : name,
+                      geo: geo,
+                    })}
+                    size={160}
+                    bgColor="#ffffff"
+                    fgColor="#166534"
+                    level="H"
+                    includeMargin={true}
+                  />
                 </div>
                 <p className="mt-2 text-sm text-gray-600">
                   📱 Scan this QR to retrieve herb details later
                 </p>
 
-                {/* Progress bar */}
                 {progress > 0 && (
                   <div className="mt-6">
                     <div className="w-full bg-gray-200 rounded-full h-3">
@@ -225,7 +223,6 @@ value={JSON.stringify(herbData)} size={160}
                   </div>
                 )}
 
-                {/* Download button */}
                 {reportReady && (
                   <div className="mt-6">
                     <a
