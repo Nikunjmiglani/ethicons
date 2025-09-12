@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,22 +26,22 @@ export default function Navbar() {
       >
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-full shadow-2xl bg-gray-900/30 backdrop-blur-lg border border-white/10">
           {/* Logo */}
-          <a href="/" className="flex items-center flex-shrink-0">
+          <Link href="/" className="flex items-center flex-shrink-0">
             <span className="font-mono text-green-100 text-2xl sm:text-3xl font-bold">
               AyuTrace
             </span>
-          </a>
+          </Link>
 
           {/* Desktop Nav */}
           <ul className="hidden md:flex items-center gap-1 bg-black/20 p-1 py-2 rounded-full">
             {navLinks.map((link) => (
               <li key={link.name}>
-                <a
+                <Link
                   href={link.href}
                   className="px-4 py-1 text-sm font-medium rounded-full text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-300"
                 >
                   {link.name}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -89,13 +90,13 @@ export default function Navbar() {
         <ul className="flex flex-col gap-6 mt-5 text-center">
           {navLinks.map((link) => (
             <li key={link.name}>
-              <a
+              <Link
                 href={link.href}
                 onClick={() => setIsOpen(false)}
                 className="text-xl font-medium sm:text-xl  text-green-600 transition-colors"
               >
                 {link.name}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
