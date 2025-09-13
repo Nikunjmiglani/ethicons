@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { getContract } from "../../lib/contract";
+import { getReadContract } from "@/lib/contract"; // ✅ read-only contract
 import { QRCodeCanvas } from "qrcode.react";
+import { useSession, signIn, signOut } from "next-auth/react"; // ✅ auth
 
 export default function LookupPage() {
+  const { data: session, status } = useSession();
   const [herbId, setHerbId] = useState("");
   const [herbData, setHerbData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -16,27 +18,60 @@ export default function LookupPage() {
       setError("");
       setHerbData(null);
 
-      const contract = await getContract();
-      const herb = await contract.getHerb(herbId);
+      // 1️⃣ First try MongoDB API
+      const res = await fetch(`/api/getHerbById?herbId=${herbId}`);
+      const data = await res.json();
 
-      // Format timestamp
-      const date = new Date(Number(herb.timestamp) * 1000).toLocaleString();
+      if (res.ok) {
+        setHerbData({
+          herbId: data.herbId,
+          name: data.name,
+          geo: data.geo,
+          collector: data.collector || "N/A",
+          timestamp: new Date(data.createdAt).toLocaleString(),
+        });
+      } else {
+        // 2️⃣ If not found in DB → fallback to Blockchain (read-only)
+        const contract = getReadContract();
+        const herb = await contract.getHerb(herbId);
+        const date = new Date(Number(herb.timestamp) * 1000).toLocaleString();
 
-      setHerbData({
-        herbId: herb.herbId,
-        name: herb.name,
-        geo: herb.geoLocation,
-        collector: herb.collector,
-        timestamp: date,
-      });
+        setHerbData({
+          herbId: herb.herbId,
+          name: herb.name,
+          geo: herb.geoLocation,
+          collector: herb.collector,
+          timestamp: date,
+        });
+      }
     } catch (err) {
       console.error(err);
-      setError("❌ Herb not found or error fetching data.");
+      setError("❌ Herb not found in MongoDB or Blockchain.");
     } finally {
       setLoading(false);
     }
   }
 
+  // ✅ Auth handling
+  if (status === "loading") {
+    return <p className="text-center mt-10">Loading session...</p>;
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="mb-4">You must sign in to access this page</p>
+        <button
+          onClick={() => signIn("google")}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Sign in with Google
+        </button>
+      </div>
+    );
+  }
+
+  // ✅ If signed in → show lookup UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg bg-white shadow-lg rounded-2xl p-8 border border-green-200">
@@ -96,11 +131,29 @@ export default function LookupPage() {
 
             {/* QR Code */}
             <div className="flex flex-col items-center space-y-2">
-              <QRCodeCanvas value={JSON.stringify(herbData)} size={160} />
+              <QRCodeCanvas
+                value={`${window.location.origin}/herbs/${herbData.herbId}`}
+                size={160}
+                bgColor="#ffffff"
+                fgColor="#166534"
+                level="H"
+                includeMargin={true}
+              />
               <p className="text-xs text-gray-500">📲 Scan to verify</p>
             </div>
           </div>
         )}
+
+        {/* ✅ Sign out */}
+        <div className="text-center mt-6">
+          <p>Signed in as {session.user.email}</p>
+          <button
+            onClick={() => signOut()}
+            className="bg-green-600 text-white px-4 py-2 rounded-full mt-2"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );

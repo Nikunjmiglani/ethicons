@@ -1,17 +1,20 @@
 "use client";
+
 import { useState } from "react";
-import { useRouter } from "next/navigation"; // 👈 for redirect
-import { getContract } from "@/lib/contract";
+import { useRouter } from "next/navigation"; 
 import { QRCodeCanvas } from "qrcode.react";
+import { getWriteContract } from "@/lib/contract"; 
+import { useSession, signIn, signOut } from "next-auth/react"; // ✅ auth
 
 export default function ImportPage() {
+  const { data: session, status } = useSession(); // ✅ check session
   const router = useRouter();
   const [name, setName] = useState("");
   const [otherHerb, setOtherHerb] = useState("");
   const [geo, setGeo] = useState("");
   const [message, setMessage] = useState("");
   const [herbId, setHerbId] = useState("");
-  const [progress, setProgress] = useState(0); // track herb journey
+  const [progress, setProgress] = useState(0); 
   const [reportReady, setReportReady] = useState(false);
 
   const predefinedHerbs = [
@@ -49,7 +52,6 @@ export default function ImportPage() {
 
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          console.log("Nominatim response:", data);
 
           let place =
             data.display_name ||
@@ -76,14 +78,37 @@ export default function ImportPage() {
 
   async function handleCollectHerb() {
     try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const contract = await getContract();
       const herbName = name === "Other" ? otherHerb : name;
       const newHerbId = generateHerbId();
 
-      const tx = await contract.collectHerb(newHerbId, herbName, geo);
-      await tx.wait();
+      // 1️⃣ Save to MongoDB
+      const res = await fetch("/api/addHerb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          herbId: newHerbId,
+          name: herbName,
+          geo,
+          collector: session?.user?.email || "Anonymous",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save herb in MongoDB");
 
+      // 2️⃣ Try saving to Blockchain (but don’t block if it fails)
+      try {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const contract = await getWriteContract();
+        const tx = await contract.collectHerb(newHerbId, herbName, geo, {
+          gasLimit: 300000,
+        });
+        await tx.wait();
+        console.log("✅ Saved on Blockchain too");
+      } catch (blockchainError) {
+        console.warn("⚠️ Blockchain save failed:", blockchainError);
+        setMessage("🌿 Herb saved in MongoDB (Blockchain sync failed, but continuing)");
+      }
+
+      // 3️⃣ Update UI (always success if MongoDB works)
       setHerbId(newHerbId);
       setMessage(`🌿 Herb submitted successfully!`);
       setName("");
@@ -113,6 +138,26 @@ export default function ImportPage() {
     }, 5000);
   }
 
+  // ✅ AUTH HANDLING
+  if (status === "loading") {
+    return <p className="text-center mt-10">Loading session...</p>;
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="mb-4">You must sign in to access this page</p>
+        <button
+          onClick={() => signIn("google")}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Sign in with Google
+        </button>
+      </div>
+    );
+  }
+
+  // ✅ If signed in → show actual ImportPage
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-6">
       <div className="w-full max-w-2xl space-y-8">
@@ -181,11 +226,7 @@ export default function ImportPage() {
                 </p>
                 <div className="mt-4 flex justify-center">
                   <QRCodeCanvas
-                    value={JSON.stringify({
-                      id: herbId,
-                      name: name === "Other" ? otherHerb : name,
-                      geo: geo,
-                    })}
+                    value={`${window.location.origin}/herbs/${herbId}`}
                     size={160}
                     bgColor="#ffffff"
                     fgColor="#166534"
@@ -242,6 +283,17 @@ export default function ImportPage() {
             )}
           </div>
         )}
+
+        {/* ✅ Sign out button */}
+        <div className="text-center mt-6">
+          <p>Signed in as {session.user.email}</p>
+          <button
+            onClick={() => signOut()}
+            className="bg-green-600 cursor-pointer text-white px-4 py-2 rounded-full mt-2"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );

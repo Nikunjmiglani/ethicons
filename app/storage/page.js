@@ -13,7 +13,7 @@ export default function StoragePage() {
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-xl w-full text-center"
       >
         {/* Title */}
-        <h1 className="text-3xl md:text-4xl font-bold text-green-700 dark:text-green-400 mb-4">
+        <h1 className="text-3xl md:text-4xl mt-15 font-bold text-green-700 dark:text-green-400 mb-4">
           ✅ Herb Storage Verified
         </h1>
         <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">

@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Providers from "@/components/Providers";
+import AuthProvider from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Head from "next/head";
 
@@ -36,7 +36,7 @@ export default function RootLayout({ children }) {
         <Navbar />
 
         {/* ✅ App-wide Providers (NextAuth etc.) */}
-        <Providers>{children}</Providers>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
