@@ -48,10 +48,10 @@ export default function Navbar() {
 
           {/* Right Logos & Mobile Menu Button */}
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* Logos */}
-            <div className="flex gap-2 sm:gap-3">
-              <img src="sih.webp" className="w-8 sm:w-9" alt="SIH" />
-              <img src="srm.webp" className="w-8 sm:w-9" alt="SRM" />
+            {/* Logos - hidden on mobile */}
+            <div className="hidden sm:flex gap-2 sm:gap-3">
+              <img src="/sih.png" className="w-8 sm:w-9" alt="SIH" />
+              <img src="/srm.png" className="w-8 sm:w-9" alt="SRM" />
             </div>
 
             {/* Mobile Menu Trigger */}
@@ -83,7 +83,7 @@ export default function Navbar() {
       >
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-6 right-6 text-white"
+          className="absolute top-6 right-6 text-gray-800"
         >
           <X className="w-6 h-6" />
         </button>
@@ -93,7 +93,7 @@ export default function Navbar() {
               <Link
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="text-xl font-medium sm:text-xl  text-green-600 transition-colors"
+                className="text-xl font-medium sm:text-xl text-green-600 transition-colors"
               >
                 {link.name}
               </Link>
