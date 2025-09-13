@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getContract } from "@/lib/contract";
+import { getReadContract } from "@/lib/contract"; // ✅ read-only contract
 
 export default function HerbDetailPage() {
   const { herbId } = useParams();
@@ -11,21 +11,21 @@ export default function HerbDetailPage() {
   useEffect(() => {
     async function fetchHerb() {
       try {
-        const contract = await getContract();
-        const herb = await contract.getHerb(herbId); // ✅ direct call to blockchain
+        const contract = getReadContract(); // ✅ no MetaMask needed
+        const herb = await contract.getHerb(herbId);
 
-        // ethers.js returns BigNumber for timestamp, convert it
-        const timestamp = herb.timestamp?.toNumber
-          ? new Date(herb.timestamp.toNumber() * 1000).toLocaleString()
+        // ethers.js BigNumber → number
+        const timestamp = herb.timestamp?.toString
+          ? new Date(Number(herb.timestamp.toString()) * 1000).toLocaleString()
           : "Unknown";
 
         setHerbData({
           id: herb.herbId,
           name: herb.name,
-          location: herb.location,
+          location: herb.geoLocation || herb.location,
           status: herb.status || "Stored under verified conditions",
           timestamp,
-          temperature: "-20°C", // extra details you want to show
+          temperature: "-20°C", // demo extra detail
           surveillance: "24x7 Active",
         });
       } catch (err) {
