@@ -11,23 +11,45 @@ export default function HerbDetailPage() {
   useEffect(() => {
     async function fetchHerb() {
       try {
-        const contract = getReadContract(); // ✅ no MetaMask needed
-        const herb = await contract.getHerb(herbId);
+        // 1️⃣ First try MongoDB API
+        const res = await fetch(`/api/getHerbById?herbId=${herbId}`);
+        const data = await res.json();
 
-        // ethers.js BigNumber → number
-        const timestamp = herb.timestamp?.toString
-          ? new Date(Number(herb.timestamp.toString()) * 1000).toLocaleString()
-          : "Unknown";
+        if (res.ok && data?.herbId) {
+          setHerbData({
+            id: data.herbId,
+            name: data.name,
+            location: data.geo,
+            status: "Stored under verified conditions",
+            timestamp: new Date(data.createdAt).toLocaleString(),
+            temperature: "-20°C",
+            surveillance: "24x7 Active",
+          });
+          return; // ✅ stop here, no blockchain needed if found in MongoDB
+        }
 
-        setHerbData({
-          id: herb.herbId,
-          name: herb.name,
-          location: herb.geoLocation || herb.location,
-          status: herb.status || "Stored under verified conditions",
-          timestamp,
-          temperature: "-20°C", // demo extra detail
-          surveillance: "24x7 Active",
-        });
+        // 2️⃣ If not found in DB → fallback to Blockchain
+        try {
+          const contract = getReadContract();
+          const herb = await contract.getHerb(herbId);
+
+          const timestamp = herb.timestamp?.toString
+            ? new Date(Number(herb.timestamp.toString()) * 1000).toLocaleString()
+            : "Unknown";
+
+          setHerbData({
+            id: herb.herbId,
+            name: herb.name,
+            location: herb.geoLocation || herb.location,
+            status: herb.status || "Stored under verified conditions",
+            timestamp,
+            temperature: "-20°C",
+            surveillance: "24x7 Active",
+          });
+        } catch (blockchainError) {
+          console.warn("⚠️ Blockchain fetch failed:", blockchainError);
+          setHerbData(null); // ❌ not found anywhere
+        }
       } catch (err) {
         console.error("Error fetching herb:", err);
         setHerbData(null);
@@ -43,7 +65,7 @@ export default function HerbDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <p className="text-lg text-gray-700 dark:text-gray-300">
-          ⏳ Loading herb details from blockchain...
+          ⏳ Loading herb details...
         </p>
       </div>
     );
@@ -53,7 +75,7 @@ export default function HerbDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <p className="text-lg text-red-600">
-          ❌ Herb not found or error fetching from blockchain.
+          ❌ Herb not found in MongoDB or Blockchain.
         </p>
       </div>
     );
@@ -93,7 +115,7 @@ export default function HerbDetailPage() {
         </p>
 
         <div className="mt-4 text-sm text-gray-500">
-          ✅ Verified & Secured on Blockchain
+          ✅ Verified & Secured on Blockchain / MongoDB
         </div>
       </div>
     </div>

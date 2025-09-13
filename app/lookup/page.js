@@ -22,7 +22,7 @@ export default function LookupPage() {
       const res = await fetch(`/api/getHerbById?herbId=${herbId}`);
       const data = await res.json();
 
-      if (res.ok) {
+      if (res.ok && data?.herbId) {
         setHerbData({
           herbId: data.herbId,
           name: data.name,
@@ -30,11 +30,18 @@ export default function LookupPage() {
           collector: data.collector || "N/A",
           timestamp: new Date(data.createdAt).toLocaleString(),
         });
-      } else {
-        // 2️⃣ If not found in DB → fallback to Blockchain (read-only)
+        return; // ✅ stop here, no blockchain needed if found in MongoDB
+      }
+
+      // 2️⃣ If not found in DB → fallback to Blockchain (read-only)
+      try {
         const contract = getReadContract();
         const herb = await contract.getHerb(herbId);
-        const date = new Date(Number(herb.timestamp) * 1000).toLocaleString();
+
+        // ethers.js returns BigNumber for timestamp
+        const date = herb.timestamp
+          ? new Date(Number(herb.timestamp) * 1000).toLocaleString()
+          : "Unknown";
 
         setHerbData({
           herbId: herb.herbId,
@@ -43,9 +50,13 @@ export default function LookupPage() {
           collector: herb.collector,
           timestamp: date,
         });
+      } catch (blockchainError) {
+        console.warn("⚠️ Blockchain fetch failed:", blockchainError);
+        // ✅ only show error if both DB + Blockchain failed
+        setError("❌ Herb not found in MongoDB or Blockchain.");
       }
     } catch (err) {
-      console.error(err);
+      console.error("General lookup error:", err);
       setError("❌ Herb not found in MongoDB or Blockchain.");
     } finally {
       setLoading(false);
@@ -97,7 +108,7 @@ export default function LookupPage() {
         </div>
 
         {/* Error */}
-        {error && (
+        {error && !herbData && (
           <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg p-3 text-center mb-4">
             {error}
           </div>
