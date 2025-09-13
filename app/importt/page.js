@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
-import { getWriteContract } from "@/lib/contract"; 
+import { getWriteContract } from "@/lib/contract";
 import { useSession, signIn, signOut } from "next-auth/react"; // ✅ auth
 
 export default function ImportPage() {
@@ -14,14 +14,31 @@ export default function ImportPage() {
   const [geo, setGeo] = useState("");
   const [message, setMessage] = useState("");
   const [herbId, setHerbId] = useState("");
-  const [progress, setProgress] = useState(0); 
+  const [progress, setProgress] = useState(0);
   const [reportReady, setReportReady] = useState(false);
 
   const predefinedHerbs = [
-    "Tulsi", "Ashwagandha", "Aloe Vera", "Neem", "Turmeric", "Ginger",
-    "Giloy", "Shatavari", "Brahmi", "Amla", "Triphala", "Haritaki",
-    "Baheda", "Arjuna", "Manjistha", "Guggul", "Mulethi", "Kalonji",
-    "Fenugreek", "Cinnamon", "Other"
+    "Tulsi",
+    "Ashwagandha",
+    "Aloe Vera",
+    "Neem",
+    "Turmeric",
+    "Ginger",
+    "Giloy",
+    "Shatavari",
+    "Brahmi",
+    "Amla",
+    "Triphala",
+    "Haritaki",
+    "Baheda",
+    "Arjuna",
+    "Manjistha",
+    "Guggul",
+    "Mulethi",
+    "Kalonji",
+    "Fenugreek",
+    "Cinnamon",
+    "Other",
   ];
 
   function generateHerbId() {
@@ -29,6 +46,9 @@ export default function ImportPage() {
   }
 
   async function handleGetLocation() {
+    // ✅ show popup immediately
+    setMessage("📍 Fetching your location...");
+
     if (!navigator.geolocation) {
       setMessage("❌ Geolocation is not supported by your browser.");
       return;
@@ -36,16 +56,17 @@ export default function ImportPage() {
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const lat = pos.coords.latitude.toFixed(5);
-        const lon = pos.coords.longitude.toFixed(5);
+        const lat = pos.coords.latitude.toFixed(7);
+        const lon = pos.coords.longitude.toFixed(7);
 
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
             {
               headers: {
-                "User-Agent": "ayurvedic-traceability-demo/1.0 (contact@example.com)",
-                "Accept": "application/json",
+                "User-Agent":
+                  "ayurvedic-traceability-demo/1.0 (contact@example.com)",
+                Accept: "application/json",
               },
             }
           );
@@ -105,7 +126,9 @@ export default function ImportPage() {
         console.log("✅ Saved on Blockchain too");
       } catch (blockchainError) {
         console.warn("⚠️ Blockchain save failed:", blockchainError);
-        setMessage("🌿 Herb saved in MongoDB (Blockchain sync failed, but continuing)");
+        setMessage(
+          "🌿 Herb saved in MongoDB (Blockchain sync failed, but continuing)"
+        );
       }
 
       // 3️⃣ Update UI (always success if MongoDB works)
@@ -217,69 +240,70 @@ export default function ImportPage() {
         </div>
 
         {message && (
-          <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow space-y-4">
-            <p className="text-lg">{message}</p>
-            {herbId && (
-              <>
-                <p className="mt-2 text-xl font-bold text-green-700">
-                  🆔 Herb ID: <span className="font-mono">{herbId}</span>
-                </p>
-                <div className="mt-4 flex justify-center">
-                  <QRCodeCanvas
-                    value={`${window.location.origin}/herbs/${herbId}`}
-                    size={160}
-                    bgColor="#ffffff"
-                    fgColor="#166534"
-                    level="H"
-                    includeMargin={true}
-                  />
+          <div className="fixed top-6 right-6 bg-white border border-green-300 shadow-lg rounded-lg px-4 py-3 text-green-800 z-50">
+            {message}
+          </div>
+        )}
+
+        {herbId && (
+          <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow space-y-4 mt-8">
+            <p className="mt-2 text-xl font-bold text-green-700">
+              🆔 Herb ID: <span className="font-mono">{herbId}</span>
+            </p>
+            <div className="mt-4 flex justify-center">
+              <QRCodeCanvas
+                value={`${window.location.origin}/herbs/${herbId}`}
+                size={160}
+                bgColor="#ffffff"
+                fgColor="#166534"
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-600">
+              📱 Scan this QR to retrieve herb details later
+            </p>
+
+            {progress > 0 && (
+              <div className="mt-6">
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className={`h-3 rounded-full ${
+                      progress === 1
+                        ? "bg-yellow-500 w-1/3"
+                        : progress === 2
+                        ? "bg-blue-500 w-2/3"
+                        : "bg-green-600 w-full"
+                    } transition-all duration-700`}
+                  ></div>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">
-                  📱 Scan this QR to retrieve herb details later
+
+                <div className="flex justify-between text-sm mt-2 text-gray-700">
+                  <span>✔ Submitted</span>
+                  <span>
+                    {progress >= 2 ? "✔ Sent for Testing" : "⏳ Testing"}
+                  </span>
+                  <span>
+                    {progress === 3 ? "✔ Report Ready" : "⏳ Report"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {reportReady && (
+              <div className="mt-6">
+                <a
+                  href="/soil_testing_report.pdf"
+                  download
+                  onClick={handleReportDownload}
+                  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+                >
+                  ⬇ Download Test Report
+                </a>
+                <p className="text-sm text-gray-600 mt-2">
+                  Redirecting to storage page in 5 seconds after download...
                 </p>
-
-                {progress > 0 && (
-                  <div className="mt-6">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className={`h-3 rounded-full ${
-                          progress === 1
-                            ? "bg-yellow-500 w-1/3"
-                            : progress === 2
-                            ? "bg-blue-500 w-2/3"
-                            : "bg-green-600 w-full"
-                        } transition-all duration-700`}
-                      ></div>
-                    </div>
-
-                    <div className="flex justify-between text-sm mt-2 text-gray-700">
-                      <span>✔ Submitted</span>
-                      <span>
-                        {progress >= 2 ? "✔ Sent for Testing" : "⏳ Testing"}
-                      </span>
-                      <span>
-                        {progress === 3 ? "✔ Report Ready" : "⏳ Report"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {reportReady && (
-                  <div className="mt-6">
-                    <a
-                      href="/soil_testing_report.pdf"
-                      download
-                      onClick={handleReportDownload}
-                      className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
-                    >
-                      ⬇ Download Test Report
-                    </a>
-                    <p className="text-sm text-gray-600 mt-2">
-                      Redirecting to storage page in 5 seconds after download...
-                    </p>
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
         )}
