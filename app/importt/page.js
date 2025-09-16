@@ -1,56 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { keccak256, toUtf8Bytes } from "ethers";
 import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { getWriteContract } from "@/lib/contract";
-import { useSession, signIn, signOut } from "next-auth/react"; // ✅ auth
+import { useSession, signIn, signOut } from "next-auth/react";
+import toast, { Toaster } from "react-hot-toast"; // ✅ toasts
 
 export default function ImportPage() {
-  const { data: session, status } = useSession(); // ✅ check session
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [otherHerb, setOtherHerb] = useState("");
-  const [geo, setGeo] = useState("");
-  const [message, setMessage] = useState("");
-  const [herbId, setHerbId] = useState("");
+
+  const predefinedHerbs = [
+    "Tulsi", "Ashwagandha", "Aloe Vera", "Neem", "Turmeric", "Ginger", "Giloy",
+    "Shatavari", "Brahmi", "Amla", "Triphala", "Haritaki", "Baheda", "Arjuna",
+    "Manjistha", "Guggul", "Mulethi", "Kalonji", "Fenugreek", "Cinnamon", "Other",
+  ];
+
+  function generateBatchId() {
+    return "BATCH-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  const [herbs, setHerbs] = useState([{ name: "", otherHerb: "", geo: "" }]);
+  const [batchId, setBatchId] = useState("");
   const [progress, setProgress] = useState(0);
   const [reportReady, setReportReady] = useState(false);
 
-  const predefinedHerbs = [
-    "Tulsi",
-    "Ashwagandha",
-    "Aloe Vera",
-    "Neem",
-    "Turmeric",
-    "Ginger",
-    "Giloy",
-    "Shatavari",
-    "Brahmi",
-    "Amla",
-    "Triphala",
-    "Haritaki",
-    "Baheda",
-    "Arjuna",
-    "Manjistha",
-    "Guggul",
-    "Mulethi",
-    "Kalonji",
-    "Fenugreek",
-    "Cinnamon",
-    "Other",
-  ];
-
-  function generateHerbId() {
-    return "HERB-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-  }
-
-  async function handleGetLocation() {
-    // ✅ show popup immediately
-    setMessage("📍 Fetching your location...");
+  async function handleGetLocation(index) {
+    toast.loading("📍 Fetching your location...", { id: "geo" });
 
     if (!navigator.geolocation) {
-      setMessage("❌ Geolocation is not supported by your browser.");
+      toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
       return;
     }
 
@@ -61,16 +42,8 @@ export default function ImportPage() {
 
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`,
-            {
-              headers: {
-                "User-Agent":
-                  "ayurvedic-traceability-demo/1.0 (contact@example.com)",
-                Accept: "application/json",
-              },
-            }
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
           );
-
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
 
@@ -82,70 +55,97 @@ export default function ImportPage() {
             data?.address?.state ||
             `${lat}, ${lon}`;
 
-          setGeo(place);
-          setMessage("✅ Location fetched: " + place);
+          setHerbs((prev) =>
+            prev.map((h, i) => (i === index ? { ...h, geo: place } : h))
+          );
+          toast.success("✅ Location fetched: " + place, { id: "geo" });
         } catch (err) {
           console.error("Reverse geocode error:", err);
-          setGeo(`${lat}, ${lon}`);
-          setMessage("⚠️ Location fetched (coords only)");
+          setHerbs((prev) =>
+            prev.map((h, i) => (i === index ? { ...h, geo: `${lat}, ${lon}` } : h))
+          );
+          toast("⚠️ Location fetched (coords only)", { id: "geo" });
         }
       },
       (err) => {
         console.error("Geo error:", err);
-        setMessage("❌ Error fetching location: " + err.message);
+        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
       }
     );
   }
 
-  async function handleCollectHerb() {
-    try {
-      const herbName = name === "Other" ? otherHerb : name;
-      const newHerbId = generateHerbId();
+  function computeBatchHash(batch) {
+  // Create deterministic string → hash
+  const batchString = JSON.stringify(batch);
+  return keccak256(toUtf8Bytes(batchString));
+}
 
-      // 1️⃣ Save to MongoDB
-      const res = await fetch("/api/addHerb", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          herbId: newHerbId,
-          name: herbName,
-          geo,
-          collector: session?.user?.email || "Anonymous",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save herb in MongoDB");
-
-      // 2️⃣ Try saving to Blockchain (but don’t block if it fails)
-      try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const contract = await getWriteContract();
-        const tx = await contract.collectHerb(newHerbId, herbName, geo, {
-          gasLimit: 300000,
-        });
-        await tx.wait();
-        console.log("✅ Saved on Blockchain too");
-      } catch (blockchainError) {
-        console.warn("⚠️ Blockchain save failed:", blockchainError);
-        setMessage(
-          "🌿 Herb saved in MongoDB (Blockchain sync failed, but continuing)"
-        );
+  async function handleCollectBatch() {
+  try {
+    // ✅ Validation before submission
+    for (const h of herbs) {
+      if (!h.name) {
+        toast.error("❌ Please select a herb for each entry.");
+        return;
       }
-
-      // 3️⃣ Update UI (always success if MongoDB works)
-      setHerbId(newHerbId);
-      setMessage(`🌿 Herb submitted successfully!`);
-      setName("");
-      setOtherHerb("");
-      setGeo("");
-
-      setProgress(1);
-      setReportReady(false);
-      simulateProgress();
-    } catch (err) {
-      console.error("Error details:", err);
-      setMessage("❌ Error collecting herb: " + (err?.reason || err?.message));
+      if (h.name === "Other" && !h.otherHerb.trim()) {
+        toast.error("❌ Please enter herb name for 'Other'.");
+        return;
+      }
+      if (!h.geo.trim()) {
+        toast.error("❌ Please fetch location for all herbs.");
+        return;
+      }
     }
+
+    const finalBatchId = generateBatchId();
+    const formattedHerbs = herbs.map((h) => ({
+      name: h.name === "Other" ? h.otherHerb : h.name,
+      geo: h.geo,
+    }));
+
+    // 1️⃣ Save full data to MongoDB
+    const res = await fetch("/api/addHerbBatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        batchId: finalBatchId,
+        herbs: formattedHerbs,
+        collector: session?.user?.email || "Anonymous",
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+
+    // 2️⃣ Compute batch hash
+    const batchHash = computeBatchHash({
+      batchId: finalBatchId,
+      herbs: formattedHerbs,
+      collector: session?.user?.email || "Anonymous",
+    });
+
+    // 3️⃣ Save hash to Blockchain
+    try {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const contract = await getWriteContract();
+      const tx = await contract.createBatch(finalBatchId, batchHash);
+      await tx.wait();
+      toast.success("✅ Batch hash stored on Blockchain");
+    } catch (err) {
+      console.warn("⚠️ Blockchain save failed:", err);
+      toast("🌿 Saved in MongoDB (Blockchain sync failed)");
+    }
+
+    // 4️⃣ UI update
+    setBatchId(finalBatchId);
+    toast.success("🌿 Herbs batch submitted successfully!");
+    setProgress(1);
+    setReportReady(false);
+    simulateProgress();
+  } catch (err) {
+    console.error("Error details:", err);
+    toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
   }
+}
 
   function simulateProgress() {
     setTimeout(() => setProgress(2), 2000);
@@ -161,7 +161,11 @@ export default function ImportPage() {
     }, 5000);
   }
 
-  // ✅ AUTH HANDLING
+  function addNewHerb() {
+    setHerbs([...herbs, { name: "", otherHerb: "", geo: "" }]);
+  }
+
+  // ✅ AUTH
   if (status === "loading") {
     return <p className="text-center mt-10">Loading session...</p>;
   }
@@ -180,79 +184,96 @@ export default function ImportPage() {
     );
   }
 
-  // ✅ If signed in → show actual ImportPage
+  // ✅ Signed in
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl space-y-8">
-        <h1 className="text-3xl font-extrabold text-center text-green-800">
+      <Toaster position="top-right" /> 
+      <div className="w-full max-w-3xl space-y-8">
+        <h1 className="text-3xl font-extrabold text-center mt-17 text-green-800">
           🌿 Ayurvedic Traceability Demo
         </h1>
 
-        <div className="bg-white shadow-md rounded-2xl p-6 border border-green-200">
-          <h2 className="text-xl font-semibold text-green-700 mb-4">
-            Collect Herb
-          </h2>
-          <div className="space-y-3">
-            <select
-              className="w-full p-3 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            >
-              <option value="">Select Herb</option>
-              {predefinedHerbs.map((herb, idx) => (
-                <option key={idx} value={herb}>
-                  {herb}
-                </option>
-              ))}
-            </select>
+        <div className="bg-white shadow-md rounded-2xl p-6 border border-green-200 space-y-6">
+          <h2 className="text-xl font-semibold text-green-700">Collect Herbs (Batch)</h2>
 
-            {name === "Other" && (
-              <input
-                className="w-full p-3 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Enter Herb Name"
-                value={otherHerb}
-                onChange={(e) => setOtherHerb(e.target.value)}
-              />
-            )}
+          {herbs.map((herb, idx) => (
+            <div key={idx} className="space-y-3 border-b border-gray-200 pb-4 mb-4">
+              <h3 className="font-bold text-green-600">Herb #{idx + 1}</h3>
 
-            <div className="flex gap-2">
-              <input
-                className="flex-1 p-3 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Geo Location"
-                value={geo}
-                onChange={(e) => setGeo(e.target.value)}
-              />
-              <button
-                onClick={handleGetLocation}
-                className="px-4 py-2 bg-gray-100 border border-green-400 rounded-lg hover:bg-green-50 transition"
+              <select
+                className="w-full p-3 border border-green-300 rounded-lg"
+                value={herb.name}
+                onChange={(e) =>
+                  setHerbs((prev) =>
+                    prev.map((h, i) => (i === idx ? { ...h, name: e.target.value } : h))
+                  )
+                }
               >
-                📍
-              </button>
-            </div>
+                <option value="">Select Herb</option>
+                {predefinedHerbs.map((h, i) => (
+                  <option key={i} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
 
-            <button
-              onClick={handleCollectHerb}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
-            >
-              🌿 Submit Herb
-            </button>
-          </div>
+              {herb.name === "Other" && (
+                <input
+                  className="w-full p-3 border border-green-300 rounded-lg"
+                  placeholder="Enter Herb Name"
+                  value={herb.otherHerb}
+                  onChange={(e) =>
+                    setHerbs((prev) =>
+                      prev.map((h, i) => (i === idx ? { ...h, otherHerb: e.target.value } : h))
+                    )
+                  }
+                />
+              )}
+
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 p-3 border border-green-300 rounded-lg"
+                  placeholder="Geo Location"
+                  value={herb.geo}
+                  onChange={(e) =>
+                    setHerbs((prev) =>
+                      prev.map((h, i) => (i === idx ? { ...h, geo: e.target.value } : h))
+                    )
+                  }
+                />
+                <button
+                  onClick={() => handleGetLocation(idx)}
+                  className="px-4 py-2 bg-gray-100 border border-green-400 rounded-lg hover:bg-green-50"
+                >
+                  📍
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            onClick={addNewHerb}
+            className="w-full bg-gray-200 text-green-800 py-2 rounded-lg hover:bg-gray-300"
+          >
+            ➕ Add Another Herb
+          </button>
+
+          <button
+            onClick={handleCollectBatch}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            🌿 Submit All Herbs (One Batch)
+          </button>
         </div>
 
-        {message && (
-          <div className="fixed top-6 right-6 bg-white border border-green-300 shadow-lg rounded-lg px-4 py-3 text-green-800 z-50">
-            {message}
-          </div>
-        )}
-
-        {herbId && (
+        {batchId && (
           <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow space-y-4 mt-8">
             <p className="mt-2 text-xl font-bold text-green-700">
-              🆔 Herb ID: <span className="font-mono">{herbId}</span>
+              🆔 Batch ID: <span className="font-mono">{batchId}</span>
             </p>
             <div className="mt-4 flex justify-center">
               <QRCodeCanvas
-                value={`${window.location.origin}/herbs/${herbId}`}
+                value={`${window.location.origin}/batches/${batchId}`}
                 size={160}
                 bgColor="#ffffff"
                 fgColor="#166534"
@@ -261,7 +282,7 @@ export default function ImportPage() {
               />
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              📱 Scan this QR to retrieve herb details later
+              📱 Scan this QR to retrieve all herbs in this batch
             </p>
 
             {progress > 0 && (
@@ -280,12 +301,8 @@ export default function ImportPage() {
 
                 <div className="flex justify-between text-sm mt-2 text-gray-700">
                   <span>✔ Submitted</span>
-                  <span>
-                    {progress >= 2 ? "✔ Sent for Testing" : "⏳ Testing"}
-                  </span>
-                  <span>
-                    {progress === 3 ? "✔ Report Ready" : "⏳ Report"}
-                  </span>
+                  <span>{progress >= 2 ? "✔ Sent for Testing" : "⏳ Testing"}</span>
+                  <span>{progress === 3 ? "✔ Report Ready" : "⏳ Report"}</span>
                 </div>
               </div>
             )}
@@ -308,7 +325,6 @@ export default function ImportPage() {
           </div>
         )}
 
-        {/* ✅ Sign out button */}
         <div className="text-center mt-6">
           <p>Signed in as {session.user.email}</p>
           <button

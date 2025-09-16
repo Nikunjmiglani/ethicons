@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { FaRegUser } from "react-icons/fa";
 import Link from "next/link";
 
 export default function Navbar() {
@@ -46,13 +47,17 @@ export default function Navbar() {
             ))}
           </ul>
 
-          {/* Right Logos & Mobile Menu Button */}
+          {/* Right Section: Logos + Profile + Mobile Button */}
           <div className="flex items-center gap-3 sm:gap-4">
-            {/* Logos - hidden on mobile */}
-            <div className="hidden sm:flex gap-2 sm:gap-3">
-              <img src="/sih.png" className="w-8 sm:w-9" alt="SIH" />
-              <img src="/srm.png" className="w-8 sm:w-9" alt="SRM" />
-            </div>
+           
+
+            {/* Profile Icon */}
+            <Link
+              href="/profile"
+              className="text-white hover:text-green-400 transition-colors"
+            >
+              <FaRegUser className="w-6 h-6" />
+            </Link>
 
             {/* Mobile Menu Trigger */}
             <button
@@ -99,6 +104,16 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
+          
+          <li>
+            <Link
+              href="/profile"
+              onClick={() => setIsOpen(false)}
+              className="text-xl font-medium sm:text-xl text-green-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <FaRegUser className="w-5 h-5" /> Profile
+            </Link>
+          </li>
         </ul>
       </motion.div>
     </>
