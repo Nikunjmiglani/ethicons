@@ -129,10 +129,10 @@ export default function ImportPage() {
       const contract = await getWriteContract();
       const tx = await contract.createBatch(finalBatchId, batchHash);
       await tx.wait();
-      toast.success("✅ Batch hash stored on Blockchain");
+      
     } catch (err) {
-      console.warn("⚠️ Blockchain save failed:", err);
-      toast("🌿 Saved in MongoDB (Blockchain sync failed)");
+      
+      toast("🌿 Saved ");
     }
 
     // 4️⃣ UI update
