@@ -66,7 +66,7 @@ export default function LookupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl bg-white shadow-lg rounded-2xl p-6 sm:p-8 border border-green-200">
-        <h1 className="text-xl sm:text-2xl font-bold text-green-800 text-center mb-6">
+        <h1 className="text-xl sm:text-2xl mt-17 font-bold text-green-800 text-center mb-6">
           🌿 Lookup Herb Batch by ID
         </h1>
 
