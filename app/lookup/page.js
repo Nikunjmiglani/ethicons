@@ -32,7 +32,7 @@ export default function LookupPage() {
       }
 
       // 2️⃣ Blockchain fallback skipped (batch-based not implemented yet)
-      setError("❌ Batch not found in MongoDB.");
+      setError("❌ Batch not found.");
     } catch (err) {
       console.error("Lookup error:", err);
       setError("❌ Error looking up batch.");
