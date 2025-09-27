@@ -108,7 +108,7 @@ export default function BatchDetailsPage() {
         </span>
       ) : (
         <span className="mt-1 sm:mt-0 text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5">
-          ❌ Not Verified
+          
         </span>
       )}
     </li>
@@ -141,13 +141,14 @@ export default function BatchDetailsPage() {
           {/* Download Report */}
           <div className="text-center">
             <a
-              href="/soil_testing_report.pdf"
-              download
-              
-              className="inline-block px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
-            >
-              ⬇ Download Test Report
-            </a>
+  href={`/api/generateReport/${batchId}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+  onClick={handleReportDownload}
+>
+  ⬇ Download Test Report
+</a>
            
           </div>
         </div>
