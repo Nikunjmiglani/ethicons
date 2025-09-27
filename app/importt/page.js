@@ -26,53 +26,85 @@ export default function ImportPage() {
   const [batchId, setBatchId] = useState("");
   const [progress, setProgress] = useState(0);
   const [reportReady, setReportReady] = useState(false);
+async function handleGetLocation(index) {
+  toast.loading("📍 Fetching your location...", { id: "geo" });
 
-  async function handleGetLocation(index) {
-    toast.loading("📍 Fetching your location...", { id: "geo" });
+  if (!navigator.geolocation) {
+    toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
+    return;
+  }
 
-    if (!navigator.geolocation) {
-      toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
-      return;
-    }
+  try {
+    // 1️⃣ Get nonce (still request it, future-proof)
+    const nonceRes = await fetch("/api/locationNonce");
+    const { nonce } = await nonceRes.json();
 
+    // 2️⃣ Get coords
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const lat = pos.coords.latitude.toFixed(7);
-        const lon = pos.coords.longitude.toFixed(7);
+        const lat = Number(pos.coords.latitude.toFixed(7));
+        const lon = Number(pos.coords.longitude.toFixed(7));
+        const accuracy = pos.coords.accuracy ?? 9999;
+        const timestamp = pos.timestamp ?? Date.now();
 
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
-          );
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
+        const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
 
-          let place =
-            data.display_name ||
-            data?.address?.city ||
-            data?.address?.town ||
-            data?.address?.village ||
-            data?.address?.state ||
-            `${lat}, ${lon}`;
+        // ⚡ TEMP: skip MetaMask signing
+        let account = null;
+        let signature = null;
 
-          setHerbs((prev) =>
-            prev.map((h, i) => (i === index ? { ...h, geo: place } : h))
-          );
-          toast.success("✅ Location fetched: " + place, { id: "geo" });
-        } catch (err) {
-          console.error("Reverse geocode error:", err);
-          setHerbs((prev) =>
-            prev.map((h, i) => (i === index ? { ...h, geo: `${lat}, ${lon}` } : h))
-          );
-          toast("⚠️ Location fetched (coords only)", { id: "geo" });
+        if (window.ethereum && process.env.NODE_ENV === "production") {
+          try {
+            const accounts = await window.ethereum.request({
+              method: "eth_requestAccounts",
+            });
+            account = accounts[0];
+            signature = await window.ethereum.request({
+              method: "personal_sign",
+              params: [JSON.stringify(payload), account],
+            });
+          } catch (e) {
+            console.warn("Skipping wallet signature:", e);
+          }
         }
+
+        // 3️⃣ Send to server anyway
+        const verifyRes = await fetch("/api/verifyLocation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload, signature, account }),
+        });
+
+        const verifyJson = await verifyRes.json();
+
+        if (!verifyRes.ok) {
+          toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
+          return;
+        }
+
+        // ✅ Save location
+        const place = verifyJson.place || `${lat}, ${lon}`;
+        setHerbs((prev) =>
+          prev.map((h, i) =>
+            i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
+          )
+        );
+
+        toast.success("✅ Location saved: " + place, { id: "geo" });
       },
       (err) => {
         console.error("Geo error:", err);
         toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
-      }
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
+  } catch (err) {
+    console.error("handleGetLocation error:", err);
+    toast.error("❌ Failed: " + err.message, { id: "geo" });
   }
+}
+
+
 
   function computeBatchHash(batch) {
   // Create deterministic string → hash
@@ -318,7 +350,7 @@ export default function ImportPage() {
                   ⬇ Download Test Report
                 </a>
                 <p className="text-sm text-gray-600 mt-2">
-                  Redirecting to storage page in 5 seconds after download...
+                 Checking storage conditions and Redirecting to storage page in 5 seconds after download...
                 </p>
               </div>
             )}

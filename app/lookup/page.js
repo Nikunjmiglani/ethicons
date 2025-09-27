@@ -115,12 +115,27 @@ export default function LookupPage() {
                   Herbs in this batch:
                 </h3>
                 <ul className="list-disc list-inside text-gray-700 space-y-1 text-sm sm:text-base">
-                  {batchData.herbs.map((h, i) => (
-                    <li key={i}>
-                      <span className="font-semibold">{h.name}</span> — {h.geo}
-                    </li>
-                  ))}
-                </ul>
+  {batchData.herbs.map((h, i) => (
+    <li key={i} className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+      <div>
+        <span className="font-semibold">{h.name}</span> — {h.geo}
+      </div>
+      {h.geoVerified ? (
+        <span className="text-green-700 text-xs bg-green-100 border border-green-300 rounded px-2 py-0.5 mt-1 sm:mt-0">
+          ✅ Verified ({Math.round(h.geoVerified.accuracy)}m,{" "}
+          {h.geoVerified.account
+            ? `${h.geoVerified.account.slice(0, 6)}...${h.geoVerified.account.slice(-4)}`
+            : "wallet"})
+        </span>
+      ) : (
+        <span className="text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5 mt-1 sm:mt-0">
+          ❌ Not Verified
+        </span>
+      )}
+    </li>
+  ))}
+</ul>
+
               </div>
             </div>
 

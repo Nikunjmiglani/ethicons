@@ -37,11 +37,7 @@ export default function BatchDetailsPage() {
     if (batchId) fetchBatch();
   }, [batchId]);
 
-  function handleReportDownload() {
-    setTimeout(() => {
-      router.push("/storage");
-    }, 5000);
-  }
+ 
 
   if (loading) {
     return (
@@ -93,16 +89,32 @@ export default function BatchDetailsPage() {
             <h3 className="font-bold text-green-700 mb-3 text-lg">
               🌱 Herbs in this batch
             </h3>
-            <ul className="space-y-2">
-              {batchData.herbs.map((h, i) => (
-                <li
-                  key={i}
-                  className="bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm"
-                >
-                  <span className="font-semibold">{h.name}</span> — {h.geo}
-                </li>
-              ))}
-            </ul>
+           <ul className="space-y-2">
+  {batchData.herbs.map((h, i) => (
+    <li
+      key={i}
+      className="bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div>
+        <span className="font-semibold">{h.name}</span> — {h.geo}
+      </div>
+
+      {h.geoVerified ? (
+        <span className="mt-1 sm:mt-0 text-green-700 text-xs bg-green-100 border border-green-300 rounded px-2 py-0.5">
+          ✅ Verified ({Math.round(h.geoVerified.accuracy)}m,{" "}
+          {h.geoVerified.account
+            ? `${h.geoVerified.account.slice(0, 6)}...${h.geoVerified.account.slice(-4)}`
+            : "wallet"})
+        </span>
+      ) : (
+        <span className="mt-1 sm:mt-0 text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5">
+          ❌ Not Verified
+        </span>
+      )}
+    </li>
+  ))}
+</ul>
+
           </div>
 
           {/* Status Timeline */}
@@ -131,14 +143,12 @@ export default function BatchDetailsPage() {
             <a
               href="/soil_testing_report.pdf"
               download
-              onClick={handleReportDownload}
+              
               className="inline-block px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
             >
               ⬇ Download Test Report
             </a>
-            <p className="text-xs text-gray-500 mt-2">
-              You’ll be redirected to storage in 5 seconds after download.
-            </p>
+           
           </div>
         </div>
       </div>
