@@ -342,13 +342,15 @@ async function handleGetLocation(index) {
             {reportReady && (
               <div className="mt-6">
                 <a
-                  href="/soil_testing_report.pdf"
-                  download
-                  onClick={handleReportDownload}
-                  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
-                >
-                  ⬇ Download Test Report
-                </a>
+  href={`/api/generateReport/${batchId}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+  onClick={handleReportDownload}
+>
+  ⬇ Download Test Report
+</a>
+
                 <p className="text-sm text-gray-600 mt-2">
                  Checking storage conditions and Redirecting to storage page in 5 seconds after download...
                 </p>

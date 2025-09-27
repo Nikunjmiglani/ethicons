@@ -129,7 +129,7 @@ export default function LookupPage() {
         </span>
       ) : (
         <span className="text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5 mt-1 sm:mt-0">
-          ❌ Not Verified
+          
         </span>
       )}
     </li>
