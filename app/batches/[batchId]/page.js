@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { QRCodeCanvas } from "qrcode.react";
 
 export default function BatchDetailsPage() {
   const { batchId } = useParams();
@@ -46,16 +45,18 @@ export default function BatchDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg text-green-700">⏳ Loading batch details...</p>
+      <div className="min-h-screen flex items-center justify-center bg-green-50">
+        <p className="text-lg text-green-700 animate-pulse">
+          ⏳ Loading batch details...
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 border border-red-300 text-red-700 rounded-lg p-4 shadow">
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="bg-white border border-red-300 text-red-700 rounded-lg p-6 shadow-lg">
           {error}
         </div>
       </div>
@@ -63,92 +64,83 @@ export default function BatchDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-white shadow-lg rounded-2xl p-8 border border-green-200">
-        <h1 className="text-2xl font-bold mt-15 text-green-800 text-center mb-6">
-          🌿 Herb Batch Details
-        </h1>
+    <div className="min-h-screen bg-gradient-to-b from-green-100 to-white flex items-center justify-center p-6">
+      <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl overflow-hidden border border-green-200">
+        {/* Header */}
+        <div className="bg-green-700 text-white px-6 py-5">
+          <h1 className="text-2xl font-bold">🌿 Verified Herb Batch</h1>
+          <p className="text-sm opacity-90">
+            Batch ID: <span className="font-mono">{batchData.batchId}</span>
+          </p>
+        </div>
 
-        {batchData && (
-          <div className="space-y-6 text-center">
-            {/* Batch Info */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-lg font-semibold text-green-700">✅ Batch Found</p>
-              <p className="text-sm text-gray-700">
-                <span className="font-bold">Batch ID:</span> {batchData.batchId}
-              </p>
-              <p className="text-sm text-gray-700">
-                <span className="font-bold">Collector:</span> {batchData.collector}
-              </p>
-              <p className="text-sm text-gray-700">
-                <span className="font-bold">Timestamp:</span> {batchData.timestamp}
-              </p>
+        {/* Body */}
+        <div className="p-6 space-y-8">
+          {/* Collector Info */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-5 text-sm">
+            <p>
+              <span className="font-semibold text-green-800">Collector:</span>{" "}
+              {batchData.collector}
+            </p>
+            <p>
+              <span className="font-semibold text-green-800">Created At:</span>{" "}
+              {batchData.timestamp}
+            </p>
+          </div>
 
-              {/* Herbs list */}
-              <div className="mt-4 text-left">
-                <h3 className="font-bold text-green-700 mb-2">Herbs in this batch:</h3>
-                <ul className="list-disc list-inside text-gray-700 space-y-1">
-                  {batchData.herbs.map((h, i) => (
-                    <li key={i}>
-                      <span className="font-semibold">{h.name}</span> — {h.geo}
-                    </li>
-                  ))}
-                </ul>
+          {/* Herbs List */}
+          <div>
+            <h3 className="font-bold text-green-700 mb-3 text-lg">
+              🌱 Herbs in this batch
+            </h3>
+            <ul className="space-y-2">
+              {batchData.herbs.map((h, i) => (
+                <li
+                  key={i}
+                  className="bg-gray-50 border border-gray-200 rounded-md px-4 py-2 text-sm"
+                >
+                  <span className="font-semibold">{h.name}</span> — {h.geo}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Status Timeline */}
+          <div>
+            <h3 className="font-bold text-green-700 mb-3 text-lg">
+              ✅ Verification Status
+            </h3>
+            <div className="relative border-l-2 border-green-300 ml-3 space-y-4">
+              <div className="ml-4">
+                <span className="text-green-700">✅ Stored under verified conditions</span>
               </div>
-            </div>
-
-            {/* ✅ Status Section */}
-            <div className="bg-white border border-green-300 shadow rounded-lg p-4">
-              <h3 className="font-bold text-green-700 mb-3">Batch Verification Status</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 p-2 rounded-lg">
-                  <span className="text-green-700">✅</span>
-                  <span>Stored under verified conditions</span>
-                </div>
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 p-2 rounded-lg">
-                  <span className="text-green-700">🛡️</span>
-                  <span>Under surveillance</span>
-                </div>
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 p-2 rounded-lg">
-                  <span className="text-green-700">🧪</span>
-                  <span>Quality test done</span>
-                </div>
-                <div className="flex items-center gap-2 bg-green-50 border border-green-200 p-2 rounded-lg">
-                  <span className="text-green-700">📦</span>
-                  <span>Ready for distribution</span>
-                </div>
+              <div className="ml-4">
+                <span className="text-green-700">🛡️ Under surveillance</span>
               </div>
-            </div>
-
-            {/* QR Code */}
-            <div className="flex flex-col items-center space-y-2">
-              <QRCodeCanvas
-                value={`${window.location.origin}/batches/${batchData.batchId}`}
-                size={160}
-                bgColor="#ffffff"
-                fgColor="#166534"
-                level="H"
-                includeMargin={true}
-              />
-              <p className="text-xs text-gray-500">📲 Scan to verify batch</p>
-            </div>
-
-            {/* ✅ Download Report */}
-            <div className="mt-6">
-              <a
-                href="/soil_testing_report.pdf"
-                download
-                onClick={handleReportDownload}
-                className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
-              >
-                ⬇ Download Test Report
-              </a>
-              <p className="text-sm text-gray-600 mt-2">
-                Redirecting to storage page in 5 seconds after download...
-              </p>
+              <div className="ml-4">
+                <span className="text-green-700">🧪 Quality test completed</span>
+              </div>
+              <div className="ml-4">
+                <span className="text-green-700">📦 Ready for distribution</span>
+              </div>
             </div>
           </div>
-        )}
+
+          {/* Download Report */}
+          <div className="text-center">
+            <a
+              href="/soil_testing_report.pdf"
+              download
+              onClick={handleReportDownload}
+              className="inline-block px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+            >
+              ⬇ Download Test Report
+            </a>
+            <p className="text-xs text-gray-500 mt-2">
+              You’ll be redirected to storage in 5 seconds after download.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
