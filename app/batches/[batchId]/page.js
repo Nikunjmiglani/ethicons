@@ -67,7 +67,7 @@ export default function BatchDetailsPage() {
     <div className="min-h-screen bg-gradient-to-b from-green-100 to-white flex items-center justify-center p-6">
       <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl overflow-hidden border border-green-200">
         {/* Header */}
-        <div className="bg-green-700 text-white px-6 py-5">
+        <div className="bg-green-700 mt-15 text-white px-6 py-5">
           <h1 className="text-2xl font-bold">🌿 Verified Herb Batch</h1>
           <p className="text-sm opacity-90">
             Batch ID: <span className="font-mono">{batchData.batchId}</span>
