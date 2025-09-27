@@ -35,60 +35,56 @@ export default function ImportPage() {
     return;
   }
 
-  try {
-    // 1️⃣ Get nonce (still request for consistency)
-    const nonceRes = await fetch("/api/locationNonce");
-    const { nonce } = await nonceRes.json();
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude.toFixed(7);
+      const lon = pos.coords.longitude.toFixed(7);
 
-    // 2️⃣ Get coords
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = Number(pos.coords.latitude.toFixed(7));
-        const lon = Number(pos.coords.longitude.toFixed(7));
-        const accuracy = pos.coords.accuracy ?? 9999;
-        const timestamp = pos.timestamp ?? Date.now();
-
-        const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
-
-        // 🚫 Skip MetaMask completely (temp mode)
-        let account = null;
-        let signature = null;
-
-        // 3️⃣ Send to server anyway
-        const verifyRes = await fetch("/api/verifyLocation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payload, signature, account }),
-        });
-
-        const verifyJson = await verifyRes.json();
-
-        if (!verifyRes.ok) {
-          toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
-          return;
-        }
-
-        // ✅ Save location
-        const place = verifyJson.place || `${lat}, ${lon}`;
-        setHerbs((prev) =>
-          prev.map((h, i) =>
-            i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
-          )
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+          {
+            headers: {
+              "User-Agent": "AyurTrace-Demo/1.0 (contact: youremail@example.com)",
+            },
+          }
         );
 
-        toast.success("✅ Location saved: " + place, { id: "geo" });
-      },
-      (err) => {
-        console.error("Geo error:", err);
-        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-    );
-  } catch (err) {
-    console.error("handleGetLocation error:", err);
-    toast.error("❌ Failed: " + err.message, { id: "geo" });
-  }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        let place =
+          data.display_name ||
+          data?.address?.city ||
+          data?.address?.town ||
+          data?.address?.village ||
+          data?.address?.state ||
+          `${lat}, ${lon}`;
+
+        setHerbs((prev) =>
+          prev.map((h, i) => (i === index ? { ...h, geo: place } : h))
+        );
+
+        toast.success("✅ Location fetched: " + place, { id: "geo" });
+      } catch (err) {
+        console.error("Reverse geocode error:", err);
+        setHerbs((prev) =>
+          prev.map((h, i) =>
+            i === index ? { ...h, geo: `${lat}, ${lon}` } : h
+          )
+        );
+        toast("⚠️ Location fetched (coords only)", { id: "geo" });
+      }
+    },
+    (err) => {
+      console.error("Geo error:", err);
+      toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
+    },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+  );
 }
+
+
 
 
   function computeBatchHash(batch) {
