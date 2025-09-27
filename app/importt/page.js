@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { QRCodeCanvas } from "qrcode.react";
 import { getWriteContract } from "@/lib/contract";
 import { useSession, signIn, signOut } from "next-auth/react";
-import toast, { Toaster } from "react-hot-toast"; // ✅ toasts
+import toast, { Toaster } from "react-hot-toast";
 
 export default function ImportPage() {
   const { data: session, status } = useSession();
@@ -26,34 +26,37 @@ export default function ImportPage() {
   const [batchId, setBatchId] = useState("");
   const [progress, setProgress] = useState(0);
   const [reportReady, setReportReady] = useState(false);
-async function handleGetLocation(index) {
-  toast.loading("📍 Fetching your location...", { id: "geo" });
 
-  if (!navigator.geolocation) {
-    toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
-    return;
-  }
+  async function handleGetLocation(index) {
+    toast.loading("📍 Fetching your location...", { id: "geo" });
 
-  try {
-    // 1️⃣ Get nonce (still request it, future-proof)
-    const nonceRes = await fetch("/api/locationNonce");
-    const { nonce } = await nonceRes.json();
+    if (!navigator.geolocation) {
+      toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
+      return;
+    }
 
-    // 2️⃣ Get coords
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = Number(pos.coords.latitude.toFixed(7));
-        const lon = Number(pos.coords.longitude.toFixed(7));
-        const accuracy = pos.coords.accuracy ?? 9999;
-        const timestamp = pos.timestamp ?? Date.now();
+    try {
+      // 1️⃣ Get nonce from server
+      const nonceRes = await fetch("/api/locationNonce");
+      const { nonce } = await nonceRes.json();
 
-        const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
+      // 2️⃣ Get coords
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(7));
+          const lon = Number(pos.coords.longitude.toFixed(7));
+          const accuracy = pos.coords.accuracy ?? 9999;
+          const timestamp = pos.timestamp ?? Date.now();
 
-        // ⚡ TEMP: skip MetaMask signing
-        let account = null;
-        let signature = null;
+          const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
 
-        if (window.ethereum && process.env.NODE_ENV === "production") {
+          // 3️⃣ Always require wallet signature
+          if (!window.ethereum) {
+            toast.error("❌ Wallet required for signing.", { id: "geo" });
+            return;
+          }
+
+          let account, signature;
           try {
             const accounts = await window.ethereum.request({
               method: "eth_requestAccounts",
@@ -64,120 +67,110 @@ async function handleGetLocation(index) {
               params: [JSON.stringify(payload), account],
             });
           } catch (e) {
-            console.warn("Skipping wallet signature:", e);
+            toast.error("❌ Wallet signature denied", { id: "geo" });
+            return;
           }
-        }
 
-        // 3️⃣ Send to server anyway
-        const verifyRes = await fetch("/api/verifyLocation", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payload, signature, account }),
-        });
+          // 4️⃣ Send to server for verification
+          const verifyRes = await fetch("/api/verifyLocation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ payload, signature, account }),
+          });
 
-        const verifyJson = await verifyRes.json();
+          const verifyJson = await verifyRes.json();
 
-        if (!verifyRes.ok) {
-          toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
-          return;
-        }
+          if (!verifyRes.ok) {
+            toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
+            return;
+          }
 
-        // ✅ Save location
-        const place = verifyJson.place || `${lat}, ${lon}`;
-        setHerbs((prev) =>
-          prev.map((h, i) =>
-            i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
-          )
-        );
+          // ✅ Save location
+          const place = verifyJson.place || `${lat}, ${lon}`;
+          setHerbs((prev) =>
+            prev.map((h, i) =>
+              i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
+            )
+          );
 
-        toast.success("✅ Location saved: " + place, { id: "geo" });
-      },
-      (err) => {
-        console.error("Geo error:", err);
-        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-    );
-  } catch (err) {
-    console.error("handleGetLocation error:", err);
-    toast.error("❌ Failed: " + err.message, { id: "geo" });
+          toast.success("✅ Location saved: " + place, { id: "geo" });
+        },
+        (err) => {
+          console.error("Geo error:", err);
+          toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+      );
+    } catch (err) {
+      console.error("handleGetLocation error:", err);
+      toast.error("❌ Failed: " + err.message, { id: "geo" });
+    }
   }
-}
-
-
 
   function computeBatchHash(batch) {
-  // Create deterministic string → hash
-  const batchString = JSON.stringify(batch);
-  return keccak256(toUtf8Bytes(batchString));
-}
+    const batchString = JSON.stringify(batch);
+    return keccak256(toUtf8Bytes(batchString));
+  }
 
   async function handleCollectBatch() {
-  try {
-    // ✅ Validation before submission
-    for (const h of herbs) {
-      if (!h.name) {
-        toast.error("❌ Please select a herb for each entry.");
-        return;
-      }
-      if (h.name === "Other" && !h.otherHerb.trim()) {
-        toast.error("❌ Please enter herb name for 'Other'.");
-        return;
-      }
-      if (!h.geo.trim()) {
-        toast.error("❌ Please fetch location for all herbs.");
-        return;
-      }
-    }
-
-    const finalBatchId = generateBatchId();
-    const formattedHerbs = herbs.map((h) => ({
-      name: h.name === "Other" ? h.otherHerb : h.name,
-      geo: h.geo,
-    }));
-
-    // 1️⃣ Save full data to MongoDB
-    const res = await fetch("/api/addHerbBatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        batchId: finalBatchId,
-        herbs: formattedHerbs,
-        collector: session?.user?.email || "Anonymous",
-      }),
-    });
-    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
-
-    // 2️⃣ Compute batch hash
-    const batchHash = computeBatchHash({
-      batchId: finalBatchId,
-      herbs: formattedHerbs,
-      collector: session?.user?.email || "Anonymous",
-    });
-
-    // 3️⃣ Save hash to Blockchain
     try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const contract = await getWriteContract();
-      const tx = await contract.createBatch(finalBatchId, batchHash);
-      await tx.wait();
-      
-    } catch (err) {
-      
-      toast("🌿 Saved ");
-    }
+      for (const h of herbs) {
+        if (!h.name) {
+          toast.error("❌ Please select a herb for each entry.");
+          return;
+        }
+        if (h.name === "Other" && !h.otherHerb.trim()) {
+          toast.error("❌ Please enter herb name for 'Other'.");
+          return;
+        }
+        if (!h.geo.trim()) {
+          toast.error("❌ Please fetch location for all herbs.");
+          return;
+        }
+      }
 
-    // 4️⃣ UI update
-    setBatchId(finalBatchId);
-    toast.success("🌿 Herbs batch submitted successfully!");
-    setProgress(1);
-    setReportReady(false);
-    simulateProgress();
-  } catch (err) {
-    console.error("Error details:", err);
-    toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
+      const finalBatchId = generateBatchId();
+      const formattedHerbs = herbs.map((h) => ({
+        name: h.name === "Other" ? h.otherHerb : h.name,
+        geo: h.geo,
+      }));
+
+      // Save to DB
+      const res = await fetch("/api/addHerbBatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batchId: finalBatchId,
+          herbs: formattedHerbs,
+          collector: session?.user?.email || "Anonymous",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+
+      // Blockchain (optional)
+      try {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const contract = await getWriteContract();
+        const tx = await contract.createBatch(finalBatchId, computeBatchHash({
+          batchId: finalBatchId,
+          herbs: formattedHerbs,
+          collector: session?.user?.email || "Anonymous",
+        }));
+        await tx.wait();
+      } catch {
+        toast("🌿 Saved to DB (Blockchain skipped)");
+      }
+
+      setBatchId(finalBatchId);
+      toast.success("🌿 Herbs batch submitted successfully!");
+      setProgress(1);
+      setReportReady(false);
+      simulateProgress();
+    } catch (err) {
+      console.error("Error details:", err);
+      toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
+    }
   }
-}
 
   function simulateProgress() {
     setTimeout(() => setProgress(2), 2000);
@@ -197,12 +190,9 @@ async function handleGetLocation(index) {
     setHerbs([...herbs, { name: "", otherHerb: "", geo: "" }]);
   }
 
-  // ✅ AUTH
-  if (status === "loading") {
-    return <p className="text-center mt-10">Loading session...</p>;
-  }
+  if (status === "loading") return <p className="text-center mt-10">Loading session...</p>;
 
-  if (!session) {
+  if (!session){
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <p className="mb-4">You must sign in to access this page</p>
