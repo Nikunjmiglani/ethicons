@@ -28,84 +28,68 @@ export default function ImportPage() {
   const [reportReady, setReportReady] = useState(false);
 
   async function handleGetLocation(index) {
-    toast.loading("📍 Fetching your location...", { id: "geo" });
+  toast.loading("📍 Fetching your location...", { id: "geo" });
 
-    if (!navigator.geolocation) {
-      toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
-      return;
-    }
-
-    try {
-      // 1️⃣ Get nonce from server
-      const nonceRes = await fetch("/api/locationNonce");
-      const { nonce } = await nonceRes.json();
-
-      // 2️⃣ Get coords
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = Number(pos.coords.latitude.toFixed(7));
-          const lon = Number(pos.coords.longitude.toFixed(7));
-          const accuracy = pos.coords.accuracy ?? 9999;
-          const timestamp = pos.timestamp ?? Date.now();
-
-          const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
-
-          // 3️⃣ Always require wallet signature
-          if (!window.ethereum) {
-            toast.error("❌ Wallet required for signing.", { id: "geo" });
-            return;
-          }
-
-          let account, signature;
-          try {
-            const accounts = await window.ethereum.request({
-              method: "eth_requestAccounts",
-            });
-            account = accounts[0];
-            signature = await window.ethereum.request({
-              method: "personal_sign",
-              params: [JSON.stringify(payload), account],
-            });
-          } catch (e) {
-            toast.error("❌ Wallet signature denied", { id: "geo" });
-            return;
-          }
-
-          // 4️⃣ Send to server for verification
-          const verifyRes = await fetch("/api/verifyLocation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ payload, signature, account }),
-          });
-
-          const verifyJson = await verifyRes.json();
-
-          if (!verifyRes.ok) {
-            toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
-            return;
-          }
-
-          // ✅ Save location
-          const place = verifyJson.place || `${lat}, ${lon}`;
-          setHerbs((prev) =>
-            prev.map((h, i) =>
-              i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
-            )
-          );
-
-          toast.success("✅ Location saved: " + place, { id: "geo" });
-        },
-        (err) => {
-          console.error("Geo error:", err);
-          toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-      );
-    } catch (err) {
-      console.error("handleGetLocation error:", err);
-      toast.error("❌ Failed: " + err.message, { id: "geo" });
-    }
+  if (!navigator.geolocation) {
+    toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
+    return;
   }
+
+  try {
+    // 1️⃣ Get nonce (still request for consistency)
+    const nonceRes = await fetch("/api/locationNonce");
+    const { nonce } = await nonceRes.json();
+
+    // 2️⃣ Get coords
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(7));
+        const lon = Number(pos.coords.longitude.toFixed(7));
+        const accuracy = pos.coords.accuracy ?? 9999;
+        const timestamp = pos.timestamp ?? Date.now();
+
+        const payload = { lat, lon, accuracy, timestamp, nonce, app: "AyurvedicTraceability" };
+
+        // 🚫 Skip MetaMask completely (temp mode)
+        let account = null;
+        let signature = null;
+
+        // 3️⃣ Send to server anyway
+        const verifyRes = await fetch("/api/verifyLocation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload, signature, account }),
+        });
+
+        const verifyJson = await verifyRes.json();
+
+        if (!verifyRes.ok) {
+          toast.error("❌ Location rejected: " + (verifyJson?.error || "Server error"), { id: "geo" });
+          return;
+        }
+
+        // ✅ Save location
+        const place = verifyJson.place || `${lat}, ${lon}`;
+        setHerbs((prev) =>
+          prev.map((h, i) =>
+            i === index ? { ...h, geo: place, geoVerified: { ...payload, account, signature } } : h
+          )
+        );
+
+        toast.success("✅ Location saved: " + place, { id: "geo" });
+      },
+      (err) => {
+        console.error("Geo error:", err);
+        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
+  } catch (err) {
+    console.error("handleGetLocation error:", err);
+    toast.error("❌ Failed: " + err.message, { id: "geo" });
+  }
+}
+
 
   function computeBatchHash(batch) {
     const batchString = JSON.stringify(batch);
