@@ -38,18 +38,36 @@ export async function POST(req) {
     console.warn("⚠️ Skipping wallet signature check (temporary mode)");
 
     // 5️⃣ Reverse geocode to human-readable place
-    let place = `${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}`;
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${payload.lat}&lon=${payload.lon}`
-      );
-      if (res.ok) {
-        const geo = await res.json();
-        if (geo.display_name) place = geo.display_name;
-      }
-    } catch (err) {
-      console.warn("⚠️ Reverse geocoding failed, fallback to coords", err);
+    // 5️⃣ Reverse geocode to human-readable place
+let place = `${payload.lat.toFixed(4)}, ${payload.lon.toFixed(4)}`;
+try {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${payload.lat}&lon=${payload.lon}&zoom=10&addressdetails=1`,
+    {
+      headers: {
+        "User-Agent": "AyurTrace-Demo/1.0 (contact: your-email@example.com)",
+      },
     }
+  );
+
+  if (res.ok) {
+    const geo = await res.json();
+    if (geo.display_name) {
+      place = geo.display_name; // full readable address
+    } else if (geo.address) {
+      place =
+        geo.address.city ||
+        geo.address.town ||
+        geo.address.village ||
+        geo.address.state ||
+        geo.address.country ||
+        place;
+    }
+  }
+} catch (err) {
+  console.warn("⚠️ Reverse geocoding failed, fallback to coords", err);
+}
+
 
     // ✅ Success
     console.log("✅ Verification success:", place);
