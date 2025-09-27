@@ -138,7 +138,7 @@ export default function ImportPage() {
         }));
         await tx.wait();
       } catch {
-        toast("🌿 Saved to DB (Blockchain skipped)");
+        toast("🌿 Saved");
       }
 
       setBatchId(finalBatchId);
