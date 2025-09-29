@@ -39,6 +39,11 @@ export default function ImportPage() {
     async (pos) => {
       const lat = pos.coords.latitude.toFixed(7);
       const lon = pos.coords.longitude.toFixed(7);
+      const accuracy = pos.coords.accuracy;
+
+      if (accuracy > 500) {
+        toast("⚠️ Low GPS accuracy, possible spoofing", { id: "geo" });
+      }
 
       try {
         const res = await fetch(
@@ -62,7 +67,9 @@ export default function ImportPage() {
           `${lat}, ${lon}`;
 
         setHerbs((prev) =>
-          prev.map((h, i) => (i === index ? { ...h, geo: place } : h))
+          prev.map((h, i) =>
+            i === index ? { ...h, geo: place, lat, lon, accuracy } : h
+          )
         );
 
         toast.success("✅ Location fetched: " + place, { id: "geo" });
@@ -70,7 +77,7 @@ export default function ImportPage() {
         console.error("Reverse geocode error:", err);
         setHerbs((prev) =>
           prev.map((h, i) =>
-            i === index ? { ...h, geo: `${lat}, ${lon}` } : h
+            i === index ? { ...h, geo: `${lat}, ${lon}`, lat, lon, accuracy } : h
           )
         );
         toast("⚠️ Location fetched (coords only)", { id: "geo" });
@@ -93,64 +100,100 @@ export default function ImportPage() {
   }
 
   async function handleCollectBatch() {
-    try {
-      for (const h of herbs) {
-        if (!h.name) {
-          toast.error("❌ Please select a herb for each entry.");
-          return;
-        }
-        if (h.name === "Other" && !h.otherHerb.trim()) {
-          toast.error("❌ Please enter herb name for 'Other'.");
-          return;
-        }
-        if (!h.geo.trim()) {
-          toast.error("❌ Please fetch location for all herbs.");
-          return;
-        }
+  try {
+    // Step 1: Validate herb inputs
+    for (const h of herbs) {
+      if (!h.name) {
+        toast.error("❌ Please select a herb for each entry.");
+        return;
       }
-
-      const finalBatchId = generateBatchId();
-      const formattedHerbs = herbs.map((h) => ({
-        name: h.name === "Other" ? h.otherHerb : h.name,
-        geo: h.geo,
-      }));
-
-      // Save to DB
-      const res = await fetch("/api/addHerbBatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          batchId: finalBatchId,
-          herbs: formattedHerbs,
-          collector: session?.user?.email || "Anonymous",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save batch in MongoDB");
-
-      // Blockchain (optional)
-      try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const contract = await getWriteContract();
-        const tx = await contract.createBatch(finalBatchId, computeBatchHash({
-          batchId: finalBatchId,
-          herbs: formattedHerbs,
-          collector: session?.user?.email || "Anonymous",
-        }));
-        await tx.wait();
-      } catch {
-        toast("🌿 Saved");
+      if (h.name === "Other" && !h.otherHerb.trim()) {
+        toast.error("❌ Please enter herb name for 'Other'.");
+        return;
       }
-
-      setBatchId(finalBatchId);
-      toast.success("🌿 Herbs batch submitted successfully!");
-      setProgress(1);
-      setReportReady(false);
-      simulateProgress();
-    } catch (err) {
-      console.error("Error details:", err);
-      toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
+      if (!h.geo.trim()) {
+        toast.error("❌ Please fetch location for all herbs.");
+        return;
+      }
     }
+
+    const finalBatchId = generateBatchId();
+    const formattedHerbs = herbs.map((h) => ({
+      name: h.name === "Other" ? h.otherHerb : h.name,
+      geo: h.geo,
+    }));
+
+    // Step 2: Run anomaly detection before saving
+    const userIP = await fetch("https://api.ipify.org?format=json").then((r) =>
+      r.json()
+    );
+
+    const detectionRes = await fetch("/api/anomaly-detection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        batchId: finalBatchId,
+        herbs: formattedHerbs,
+        collector: session?.user?.email || "Anonymous",
+        ipAddress: userIP.ip,
+        deviceInfo: {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          language: navigator.language,
+        },
+      }),
+    });
+
+    if (!detectionRes.ok) throw new Error("Anomaly detection failed");
+    const detectionResult = await detectionRes.json();
+
+    if (detectionResult.isSuspicious) {
+      toast.error(
+        `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
+      );
+      return; // 🚫 Block save
+    }
+
+    // Step 3: Save to DB
+    const res = await fetch("/api/addHerbBatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        batchId: finalBatchId,
+        herbs: formattedHerbs,
+        collector: session?.user?.email || "Anonymous",
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+
+    // Step 4: Save to Blockchain (optional)
+    try {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const contract = await getWriteContract();
+      const tx = await contract.createBatch(
+        finalBatchId,
+        computeBatchHash({
+          batchId: finalBatchId,
+          herbs: formattedHerbs,
+          collector: session?.user?.email || "Anonymous",
+        })
+      );
+      await tx.wait();
+    } catch {
+      toast("🌿 Saved");
+    }
+
+    // Step 5: UI success handling
+    setBatchId(finalBatchId);
+    toast.success("🌿 Herbs batch submitted successfully!");
+    setProgress(1);
+    setReportReady(false);
+    simulateProgress();
+  } catch (err) {
+    console.error("Error details:", err);
+    toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
   }
+}
+
 
   function simulateProgress() {
     setTimeout(() => setProgress(2), 2000);

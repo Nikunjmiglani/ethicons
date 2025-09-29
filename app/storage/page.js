@@ -90,9 +90,7 @@ export default function StoragePage() {
             This batch has been successfully verified and stored.
           </p>
           <div className="text-sm space-y-1 text-gray-600 dark:text-gray-400">
-            <p>
-              <span className="font-semibold">Batch ID:</span> BATCH-XYZ123
-            </p>
+            
             <p>
               <span className="font-semibold">Verified On:</span>{" "}
               {new Date().toLocaleString()}

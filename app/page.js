@@ -139,7 +139,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="lg"
-                className="px-8 py-4 text-lg rounded-full border-2 hover:scale-110 transition-transform duration-200 border-green-600 text-green-600 dark:border-green-400 dark:text-green-400"
+                className="px-8 py-4 text-lg cursor-pointer rounded-full border-2 hover:scale-110 transition-transform duration-200 border-green-600 text-green-600 dark:border-green-400 dark:text-green-400"
               >
                 Add Your Herb Now!
               </Button>
