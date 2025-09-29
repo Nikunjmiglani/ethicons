@@ -356,10 +356,7 @@ export default function ImportPage() {
             <p>
               <strong>Risk Level:</strong> {verificationResult.riskLevel}
             </p>
-            <p>
-              <strong>Suspicious:</strong>{" "}
-              {verificationResult.isSuspicious ? "Yes" : "No"}
-            </p>
+           
 
             {verificationResult.alerts?.length > 0 && (
               <div className="mt-3">
