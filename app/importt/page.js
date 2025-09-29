@@ -372,16 +372,7 @@ export default function ImportPage() {
               </div>
             )}
 
-            {verificationResult.recommendations?.length > 0 && (
-              <div className="mt-3">
-                <strong>Recommendations:</strong>
-                <ul className="list-disc ml-6 text-gray-700">
-                  {verificationResult.recommendations.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            
           </div>
         )}
 
