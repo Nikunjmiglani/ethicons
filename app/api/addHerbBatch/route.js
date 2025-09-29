@@ -1,40 +1,27 @@
 import clientPromise from "@/lib/mongodb";
+import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { batchId, herbs, collector } = body;
-
-    if (!batchId || !herbs?.length) {
-      return Response.json(
-        { success: false, error: "Batch ID and herbs are required" },
-        { status: 400 }
-      );
-    }
-
-    // Normalize herbs: keep geoVerified if present
-    const formattedHerbs = herbs.map((h) => ({
-      name: h.name,
-      geo: h.geo,
-      geoVerified: h.geoVerified || null, // ✅ store verified metadata
-    }));
+    const { batchId, herbs, collector, anomalyCheck } = body;
 
     const client = await clientPromise;
-    const db = client.db("herbTraceability");
-    const collection = db.collection("herb_batches");
+    const db = client.db("herbTraceability"); // ✅ matches Atlas DB
 
-    await collection.insertOne({
+    await db.collection("herb_batches").insertOne({
       batchId,
-      herbs: formattedHerbs,
-      collector: collector || "Anonymous",
+      herbs,
+      collector,
+      geoVerified: anomalyCheck || { status: "NOT_VERIFIED" },
       createdAt: new Date(),
     });
 
-    return Response.json({ success: true, batchId }, { status: 200 });
-  } catch (err) {
-    console.error("❌ Error saving batch:", err);
-    return Response.json(
-      { success: false, error: err.message },
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("❌ Error saving herb batch:", error);
+    return NextResponse.json(
+      { error: "Failed to save herb batch", details: error.message },
       { status: 500 }
     );
   }

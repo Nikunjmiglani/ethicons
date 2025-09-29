@@ -26,174 +26,202 @@ export default function ImportPage() {
   const [batchId, setBatchId] = useState("");
   const [progress, setProgress] = useState(0);
   const [reportReady, setReportReady] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null); // ✅ NEW
 
+  // ------------------ LOCATION FETCH ------------------
   async function handleGetLocation(index) {
-  toast.loading("📍 Fetching your location...", { id: "geo" });
+    toast.loading("📍 Fetching your location...", { id: "geo" });
 
-  if (!navigator.geolocation) {
-    toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
-    return;
+    if (!navigator.geolocation) {
+      toast.error("❌ Geolocation not supported by your browser.", { id: "geo" });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude.toFixed(7);
+        const lon = pos.coords.longitude.toFixed(7);
+        const accuracy = pos.coords.accuracy;
+
+        if (accuracy > 500) {
+          toast("⚠️ Low GPS accuracy", { id: "geo" });
+        }
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+            {
+              headers: {
+                "User-Agent": "AyurTrace-Demo/1.0 (contact: youremail@example.com)",
+              },
+            }
+          );
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          let place =
+            data.display_name ||
+            data?.address?.city ||
+            data?.address?.town ||
+            data?.address?.village ||
+            data?.address?.state ||
+            `${lat}, ${lon}`;
+
+          setHerbs((prev) =>
+            prev.map((h, i) =>
+              i === index
+                ? {
+                    ...h,
+                    geo: place,
+                    lat,
+                    lon,
+                    accuracy,
+                    country: data?.address?.country || "",
+                    state: data?.address?.state || "",
+                  }
+                : h
+            )
+          );
+
+          toast.success("✅ Location fetched: " + place, { id: "geo" });
+        } catch (err) {
+          console.error("Reverse geocode error:", err);
+          setHerbs((prev) =>
+            prev.map((h, i) =>
+              i === index
+                ? {
+                    ...h,
+                    geo: `${lat}, ${lon}`,
+                    lat,
+                    lon,
+                    accuracy,
+                    country: "",
+                    state: "",
+                  }
+                : h
+            )
+          );
+          toast("⚠️ Location fetched (coords only)", { id: "geo" });
+        }
+      },
+      (err) => {
+        console.error("Geo error:", err);
+        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
   }
 
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      const lat = pos.coords.latitude.toFixed(7);
-      const lon = pos.coords.longitude.toFixed(7);
-      const accuracy = pos.coords.accuracy;
-
-      if (accuracy > 500) {
-        toast("⚠️ Low GPS accuracy, possible spoofing", { id: "geo" });
-      }
-
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
-          {
-            headers: {
-              "User-Agent": "AyurTrace-Demo/1.0 (contact: youremail@example.com)",
-            },
-          }
-        );
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        let place =
-          data.display_name ||
-          data?.address?.city ||
-          data?.address?.town ||
-          data?.address?.village ||
-          data?.address?.state ||
-          `${lat}, ${lon}`;
-
-        setHerbs((prev) =>
-          prev.map((h, i) =>
-            i === index ? { ...h, geo: place, lat, lon, accuracy } : h
-          )
-        );
-
-        toast.success("✅ Location fetched: " + place, { id: "geo" });
-      } catch (err) {
-        console.error("Reverse geocode error:", err);
-        setHerbs((prev) =>
-          prev.map((h, i) =>
-            i === index ? { ...h, geo: `${lat}, ${lon}`, lat, lon, accuracy } : h
-          )
-        );
-        toast("⚠️ Location fetched (coords only)", { id: "geo" });
-      }
-    },
-    (err) => {
-      console.error("Geo error:", err);
-      toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
-    },
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-  );
-}
-
-
-
-
+  // ------------------ UTILS ------------------
   function computeBatchHash(batch) {
     const batchString = JSON.stringify(batch);
     return keccak256(toUtf8Bytes(batchString));
   }
 
+  // ------------------ SUBMIT BATCH ------------------
   async function handleCollectBatch() {
-  try {
-    // Step 1: Validate herb inputs
-    for (const h of herbs) {
-      if (!h.name) {
-        toast.error("❌ Please select a herb for each entry.");
-        return;
-      }
-      if (h.name === "Other" && !h.otherHerb.trim()) {
-        toast.error("❌ Please enter herb name for 'Other'.");
-        return;
-      }
-      if (!h.geo.trim()) {
-        toast.error("❌ Please fetch location for all herbs.");
-        return;
-      }
-    }
-
-    const finalBatchId = generateBatchId();
-    const formattedHerbs = herbs.map((h) => ({
-      name: h.name === "Other" ? h.otherHerb : h.name,
-      geo: h.geo,
-    }));
-
-    // Step 2: Run anomaly detection before saving
-    const userIP = await fetch("https://api.ipify.org?format=json").then((r) =>
-      r.json()
-    );
-
-    const detectionRes = await fetch("/api/anomaly-detection", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        batchId: finalBatchId,
-        herbs: formattedHerbs,
-        collector: session?.user?.email || "Anonymous",
-        ipAddress: userIP.ip,
-        deviceInfo: {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          language: navigator.language,
-        },
-      }),
-    });
-
-    if (!detectionRes.ok) throw new Error("Anomaly detection failed");
-    const detectionResult = await detectionRes.json();
-
-    if (detectionResult.isSuspicious) {
-      toast.error(
-        `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
-      );
-      return; // 🚫 Block save
-    }
-
-    // Step 3: Save to DB
-    const res = await fetch("/api/addHerbBatch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        batchId: finalBatchId,
-        herbs: formattedHerbs,
-        collector: session?.user?.email || "Anonymous",
-      }),
-    });
-    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
-
-    // Step 4: Save to Blockchain (optional)
     try {
-      await window.ethereum.request({ method: "eth_requestAccounts" });
-      const contract = await getWriteContract();
-      const tx = await contract.createBatch(
-        finalBatchId,
-        computeBatchHash({
+      // Step 1: Validate
+      for (const h of herbs) {
+        if (!h.name) {
+          toast.error("❌ Please select a herb for each entry.");
+          return;
+        }
+        if (h.name === "Other" && !h.otherHerb.trim()) {
+          toast.error("❌ Please enter herb name for 'Other'.");
+          return;
+        }
+        if (!h.geo.trim()) {
+          toast.error("❌ Please fetch location for all herbs.");
+          return;
+        }
+      }
+
+      const finalBatchId = generateBatchId();
+      const formattedHerbs = herbs.map((h) => ({
+        name: h.name === "Other" ? h.otherHerb : h.name,
+        geo: h.geo,
+      }));
+
+      // Step 2: Anomaly Detection
+      const userIP = await fetch("https://api.ipify.org?format=json").then((r) =>
+        r.json()
+      );
+
+      const detectionRes = await fetch("/api/anomaly-detection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           batchId: finalBatchId,
           herbs: formattedHerbs,
           collector: session?.user?.email || "Anonymous",
-        })
-      );
-      await tx.wait();
-    } catch {
-      toast("🌿 Saved");
+          ipAddress: userIP.ip,
+          deviceInfo: {
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+          },
+          claimedLocation: {
+            lat: herbs[0].lat,
+            lon: herbs[0].lon,
+            country: herbs[0].country,
+            state: herbs[0].state,
+          },
+        }),
+      });
+
+      if (!detectionRes.ok) throw new Error("Anomaly detection failed");
+      const detectionResult = await detectionRes.json();
+      setVerificationResult(detectionResult); // ✅ Store for UI
+
+      if (detectionResult.isSuspicious) {
+        toast.error(
+          `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
+        );
+        return;
+      }
+
+      // Step 3: Save to DB
+      const res = await fetch("/api/addHerbBatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          batchId: finalBatchId,
+          herbs: formattedHerbs,
+          collector: session?.user?.email || "Anonymous",
+          anomalyCheck: detectionResult,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+
+      // Step 4: Blockchain (optional)
+      try {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const contract = await getWriteContract();
+        const tx = await contract.createBatch(
+          finalBatchId,
+          computeBatchHash({
+            batchId: finalBatchId,
+            herbs: formattedHerbs,
+            collector: session?.user?.email || "Anonymous",
+          })
+        );
+        await tx.wait();
+      } catch {
+        toast("🌿 Saved");
+      }
+
+      // Step 5: UI success
+      setBatchId(finalBatchId);
+      toast.success("🌿 Herbs batch submitted successfully!");
+      setProgress(1);
+      setReportReady(false);
+      simulateProgress();
+    } catch (err) {
+      console.error("Error details:", err);
+      toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
     }
-
-    // Step 5: UI success handling
-    setBatchId(finalBatchId);
-    toast.success("🌿 Herbs batch submitted successfully!");
-    setProgress(1);
-    setReportReady(false);
-    simulateProgress();
-  } catch (err) {
-    console.error("Error details:", err);
-    toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
   }
-}
-
 
   function simulateProgress() {
     setTimeout(() => setProgress(2), 2000);
@@ -213,9 +241,11 @@ export default function ImportPage() {
     setHerbs([...herbs, { name: "", otherHerb: "", geo: "" }]);
   }
 
-  if (status === "loading") return <p className="text-center mt-10">Loading session...</p>;
+  // ------------------ UI ------------------
+  if (status === "loading")
+    return <p className="text-center mt-10">Loading session...</p>;
 
-  if (!session){
+  if (!session) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <p className="mb-4">You must sign in to access this page</p>
@@ -229,15 +259,15 @@ export default function ImportPage() {
     );
   }
 
-  // ✅ Signed in
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center p-6">
-      <Toaster position="top-right" /> 
+      <Toaster position="top-right" />
       <div className="w-full max-w-3xl space-y-8">
         <h1 className="text-3xl font-extrabold text-center mt-17 text-green-800">
           🌿 Ayurvedic Traceability Demo
         </h1>
 
+        {/* ---------------- Herb Form ---------------- */}
         <div className="bg-white shadow-md rounded-2xl p-6 border border-green-200 space-y-6">
           <h2 className="text-xl font-semibold text-green-700">Collect Herbs (Batch)</h2>
 
@@ -311,6 +341,51 @@ export default function ImportPage() {
           </button>
         </div>
 
+        {/* ---------------- Verification Result Card ---------------- */}
+        {verificationResult && (
+          <div
+            className={`p-6 rounded-xl shadow-md border ${
+              verificationResult.riskLevel === "CRITICAL"
+                ? "bg-red-100 border-red-400"
+                : verificationResult.riskLevel === "HIGH"
+                ? "bg-yellow-100 border-yellow-400"
+                : "bg-green-100 border-green-400"
+            }`}
+          >
+            <h3 className="text-lg font-bold mb-2"> Geo-Location Verification Result:</h3>
+            <p>
+              <strong>Risk Level:</strong> {verificationResult.riskLevel}
+            </p>
+            <p>
+              <strong>Suspicious:</strong>{" "}
+              {verificationResult.isSuspicious ? "Yes" : "No"}
+            </p>
+
+            {verificationResult.alerts?.length > 0 && (
+              <div className="mt-3">
+                <strong>Alerts:</strong>
+                <ul className="list-disc ml-6 text-red-600">
+                  {verificationResult.alerts.map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {verificationResult.recommendations?.length > 0 && (
+              <div className="mt-3">
+                <strong>Recommendations:</strong>
+                <ul className="list-disc ml-6 text-gray-700">
+                  {verificationResult.recommendations.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------- Batch QR + Progress ---------------- */}
         {batchId && (
           <div className="bg-green-50 border border-green-300 text-green-800 rounded-lg p-6 text-center font-medium shadow space-y-4 mt-8">
             <p className="mt-2 text-xl font-bold text-green-700">
@@ -355,23 +430,25 @@ export default function ImportPage() {
             {reportReady && (
               <div className="mt-6">
                 <a
-  href={`/api/generateReport/${batchId}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
-  onClick={handleReportDownload}
->
-  ⬇ Download Test Report
-</a>
+                  href={`/api/generateReport/${batchId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-green-700 text-white rounded-lg font-semibold hover:bg-green-800 transition"
+                  onClick={handleReportDownload}
+                >
+                  ⬇ Download Test Report
+                </a>
 
                 <p className="text-sm text-gray-600 mt-2">
-                 Checking storage conditions and Redirecting to storage page in 5 seconds after download...
+                  Checking storage conditions and Redirecting to storage page in 5 seconds after
+                  download...
                 </p>
               </div>
             )}
           </div>
         )}
 
+        {/* ---------------- Footer ---------------- */}
         <div className="text-center mt-6">
           <p>Signed in as {session.user.email}</p>
           <button

@@ -1,9 +1,9 @@
-import axios from "axios";
-
 export async function getGeolocation(ipAddress) {
   try {
-    const res = await axios.get(`http://ip-api.com/json/${ipAddress}`);
-    const d = res.data;
+    const res = await fetch(`http://ip-api.com/json/${ipAddress}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+
     return {
       ip: d.query,
       country: d.country,

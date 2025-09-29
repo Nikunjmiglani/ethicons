@@ -1,11 +1,10 @@
 class LocationAnomalyDetector {
   constructor() {
     this.weights = {
-      locationMismatch: 0.3,
-      vpnDetection: 0.25,
-      behavioralPattern: 0.2,
-      timeAnomaly: 0.15,
-      deviceConsistency: 0.1,
+      locationMismatch: 0.4,
+      vpnDetection: 0.3,
+      deviceConsistency: 0.2,
+      timeAnomaly: 0.1,
     };
   }
 
@@ -13,21 +12,37 @@ class LocationAnomalyDetector {
     const scores = {
       locationMismatch: this.checkLocationMismatch(data.geoData, data.claimedLocation),
       vpnDetection: await this.detectVPN(data.geoData),
-      behavioralPattern: this.analyzeBehavioralPatterns(data.previousLocations, data.geoData),
-      timeAnomaly: this.checkTimePatterns(data.geoData),
       deviceConsistency: this.checkDeviceConsistency(data.deviceInfo, data.geoData),
+      timeAnomaly: this.checkTimePatterns(data.geoData),
     };
 
     const totalScore = Object.keys(scores).reduce(
-      (sum, k) => sum + scores[k] * this.weights[k],
+      (sum, key) => sum + scores[key] * this.weights[key],
       0
     );
+
     return { ...scores, totalScore };
   }
 
   checkLocationMismatch(geoData, claimedLocation) {
     if (!claimedLocation) return 50;
-    if (claimedLocation.includes(",") && !claimedLocation.includes(geoData.country)) return 100;
+
+    if (claimedLocation.country && claimedLocation.country !== geoData.country) {
+      return 100;
+    }
+    if (claimedLocation.state && claimedLocation.state !== geoData.region) {
+      return 75;
+    }
+    if (claimedLocation.lat && claimedLocation.lon) {
+      const dist = this.calculateDistance(
+        parseFloat(claimedLocation.lat),
+        parseFloat(claimedLocation.lon),
+        geoData.lat,
+        geoData.lon
+      );
+      if (dist > 500) return 80;
+    }
+
     return 0;
   }
 
@@ -37,18 +52,27 @@ class LocationAnomalyDetector {
     return 0;
   }
 
-  analyzeBehavioralPatterns(prev, currentGeo) {
-    if (!prev.length) return 20;
-    return 10; // simplified: you can extend with distance checks
-  }
-
-  checkTimePatterns(geoData) {
-    return 10; // placeholder, can improve
-  }
-
   checkDeviceConsistency(deviceInfo, geoData) {
-    if (deviceInfo?.timezone && deviceInfo.timezone !== geoData.timezone) return 40;
+    if (deviceInfo?.timezone && !geoData.timezone.includes(deviceInfo.timezone)) {
+      return 40;
+    }
     return 5;
+  }
+
+  checkTimePatterns() {
+    return 10; // Simplified placeholder
+  }
+
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 }
 
