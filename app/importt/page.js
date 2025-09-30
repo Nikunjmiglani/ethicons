@@ -121,6 +121,7 @@ export default function ImportPage() {
 
   // ------------------ SUBMIT BATCH ------------------
   // ------------------ SUBMIT BATCH ------------------
+// ------------------ SUBMIT BATCH ------------------
 async function handleCollectBatch() {
   try {
     // Step 1: Validate
@@ -175,11 +176,15 @@ async function handleCollectBatch() {
     const detectionResult = await detectionRes.json();
     setVerificationResult(detectionResult);
 
-    if (detectionResult.isSuspicious) {
+    // ✅ Strict check: if risk > LOW and alerts exist → stop
+    if (
+      detectionResult.riskLevel !== "LOW" &&
+      detectionResult.alerts?.length > 0
+    ) {
       toast.error(
-        `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
+        `❌ Batch failed due to geo-location anomaly! Risk: ${detectionResult.riskLevel}`
       );
-      return;
+      return; // stop here, don’t save
     }
 
     // Step 3: Save to DB
@@ -193,7 +198,7 @@ async function handleCollectBatch() {
         anomalyCheck: detectionResult,
       }),
     });
-    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+    if (!res.ok) throw new Error("Failed to save batch");
 
     // Step 4: Blockchain (optional)
     try {
@@ -213,11 +218,11 @@ async function handleCollectBatch() {
     }
 
     // ✅ Step 5: Reset states & show new batch
-    setBatchId(finalBatchId);                     // new QR value
+    setBatchId(finalBatchId);
     setProgress(1);
     setReportReady(false);
-    setVerificationResult(null);                  // clear old verification
-    setHerbs([{ name: "", otherHerb: "", geo: "" }]); // reset form
+    setVerificationResult(null);
+    setHerbs([{ name: "", otherHerb: "", geo: "" }]);
 
     toast.success("🌿 Herbs batch submitted successfully!");
     simulateProgress();
@@ -226,6 +231,7 @@ async function handleCollectBatch() {
     toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
   }
 }
+
 
 
   function simulateProgress() {
@@ -347,36 +353,41 @@ async function handleCollectBatch() {
         </div>
 
         {/* ---------------- Verification Result Card ---------------- */}
-        {verificationResult && (
-          <div
-            className={`p-6 rounded-xl shadow-md border ${
-              verificationResult.riskLevel === "CRITICAL"
-                ? "bg-red-100 border-red-400"
-                : verificationResult.riskLevel === "HIGH"
-                ? "bg-yellow-100 border-yellow-400"
-                : "bg-green-100 border-green-400"
-            }`}
-          >
-            <h3 className="text-lg font-bold mb-2"> Geo-Location Verification Result:</h3>
-            <p>
-              <strong>Risk Level:</strong> {verificationResult.riskLevel}
-            </p>
-           
+       {verificationResult && (
+  <div
+    className={`p-6 rounded-xl shadow-md border ${
+      verificationResult.riskLevel === "CRITICAL"
+        ? "bg-red-100 border-red-400"
+        : verificationResult.riskLevel === "HIGH"
+        ? "bg-yellow-100 border-yellow-400"
+        : "bg-green-100 border-green-400"
+    }`}
+  >
+    <h3 className="text-lg font-bold mb-2">Geo-Location Verification Result:</h3>
+    <p>
+      <strong>Risk Level:</strong> {verificationResult.riskLevel}
+    </p>
 
-            {verificationResult.alerts?.length > 0 && (
-              <div className="mt-3">
-                <strong>Alerts:</strong>
-                <ul className="list-disc ml-6 text-red-600">
-                  {verificationResult.alerts.map((a, i) => (
-                    <li key={i}>{a}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+    {verificationResult.alerts?.length > 0 && (
+      <div className="mt-3">
+        <strong>Alerts:</strong>
+        <ul className="list-disc ml-6 text-red-600">
+          {verificationResult.alerts.map((a, i) => (
+            <li key={i}>{a}</li>
+          ))}
+        </ul>
+      </div>
+    )}
 
-            
-          </div>
-        )}
+    {verificationResult.riskLevel !== "LOW" &&
+      verificationResult.alerts?.length > 0 && (
+        <p className="mt-4 text-red-700 font-bold">
+          ❌ Batch failed & not saved due to geo-location anomaly!
+        </p>
+      )}
+  </div>
+)}
+
 
         {/* ---------------- Batch QR + Progress ---------------- */}
         {batchId && (
