@@ -21,6 +21,7 @@ export default function BatchDetailsPage() {
             herbs: data.herbs || [],
             collector: data.collector || "N/A",
             timestamp: new Date(data.createdAt).toLocaleString(),
+            anomalyCheck: data.anomalyCheck || null, // ✅ add verification result
           });
         } else {
           setError(data.error || "Batch not found.");
@@ -81,6 +82,38 @@ export default function BatchDetailsPage() {
             </p>
           </div>
 
+          {/* ✅ Verification Result */}
+          {batchData.anomalyCheck && (
+            <div
+              className={`p-5 rounded-lg border shadow-md ${
+                batchData.anomalyCheck.riskLevel === "CRITICAL"
+                  ? "bg-red-100 border-red-400"
+                  : batchData.anomalyCheck.riskLevel === "HIGH"
+                  ? "bg-yellow-100 border-yellow-400"
+                  : "bg-green-100 border-green-400"
+              }`}
+            >
+              <h3 className="text-lg font-bold mb-2">
+                📍 Geo-Location Verification Result
+              </h3>
+              <p>
+                <strong>Risk Level:</strong>{" "}
+                {batchData.anomalyCheck.riskLevel}
+              </p>
+
+              {batchData.anomalyCheck.alerts?.length > 0 && (
+                <div className="mt-2">
+                  <strong>Alerts:</strong>
+                  <ul className="list-disc ml-6 text-red-600">
+                    {batchData.anomalyCheck.alerts.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Herbs List */}
           <div>
             <h3 className="font-bold text-green-700 mb-3 text-lg">
@@ -95,21 +128,15 @@ export default function BatchDetailsPage() {
                   <div className="break-words">
                     <span className="font-semibold">{h.name}</span> — {h.geo}
                   </div>
-
                   {h.geoVerified ? (
                     <span className="text-green-700 text-xs bg-green-100 border border-green-300 rounded px-2 py-0.5 whitespace-nowrap">
                       ✅ Verified ({Math.round(h.geoVerified.accuracy)}m,{" "}
                       {h.geoVerified.account
-                        ? `${h.geoVerified.account.slice(
-                            0,
-                            6
-                          )}...${h.geoVerified.account.slice(-4)}`
+                        ? `${h.geoVerified.account.slice(0, 6)}...${h.geoVerified.account.slice(-4)}`
                         : "wallet"})
                     </span>
                   ) : (
-                    <span className="text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5 whitespace-nowrap">
-                      
-                    </span>
+                    <span className="text-gray-500 text-xs bg-gray-100 border border-gray-300 rounded px-2 py-0.5 whitespace-nowrap"></span>
                   )}
                 </li>
               ))}
@@ -122,20 +149,10 @@ export default function BatchDetailsPage() {
               ✅ Verification Status
             </h3>
             <div className="relative border-l-2 border-green-300 ml-3 space-y-4">
-              <div className="ml-4">
-                <span className="text-green-700">
-                  ✅ Stored under verified conditions
-                </span>
-              </div>
-              <div className="ml-4">
-                <span className="text-green-700">🛡️ Under surveillance</span>
-              </div>
-              <div className="ml-4">
-                <span className="text-green-700">🧪 Quality test completed</span>
-              </div>
-              <div className="ml-4">
-                <span className="text-green-700">📦 Ready for distribution</span>
-              </div>
+              <div className="ml-4">✅ Stored under verified conditions</div>
+              <div className="ml-4">🛡️ Under surveillance</div>
+              <div className="ml-4">🧪 Quality test completed</div>
+              <div className="ml-4">📦 Ready for distribution</div>
             </div>
           </div>
 

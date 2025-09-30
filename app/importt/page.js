@@ -107,7 +107,7 @@ export default function ImportPage() {
       },
       (err) => {
         console.error("Geo error:", err);
-        toast.error("❌ Error fetching location: " + err.message, { id: "geo" });
+        toast.error("❌ Error fetching location: Try enabling GPS or check connection.");
       },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
@@ -120,108 +120,113 @@ export default function ImportPage() {
   }
 
   // ------------------ SUBMIT BATCH ------------------
-  async function handleCollectBatch() {
-    try {
-      // Step 1: Validate
-      for (const h of herbs) {
-        if (!h.name) {
-          toast.error("❌ Please select a herb for each entry.");
-          return;
-        }
-        if (h.name === "Other" && !h.otherHerb.trim()) {
-          toast.error("❌ Please enter herb name for 'Other'.");
-          return;
-        }
-        if (!h.geo.trim()) {
-          toast.error("❌ Please fetch location for all herbs.");
-          return;
-        }
-      }
-
-      const finalBatchId = generateBatchId();
-      const formattedHerbs = herbs.map((h) => ({
-        name: h.name === "Other" ? h.otherHerb : h.name,
-        geo: h.geo,
-      }));
-
-      // Step 2: Anomaly Detection
-      const userIP = await fetch("https://api.ipify.org?format=json").then((r) =>
-        r.json()
-      );
-
-      const detectionRes = await fetch("/api/anomaly-detection", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          batchId: finalBatchId,
-          herbs: formattedHerbs,
-          collector: session?.user?.email || "Anonymous",
-          ipAddress: userIP.ip,
-          deviceInfo: {
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            language: navigator.language,
-          },
-          claimedLocation: {
-            lat: herbs[0].lat,
-            lon: herbs[0].lon,
-            country: herbs[0].country,
-            state: herbs[0].state,
-          },
-        }),
-      });
-
-      if (!detectionRes.ok) throw new Error("Anomaly detection failed");
-      const detectionResult = await detectionRes.json();
-      setVerificationResult(detectionResult); // ✅ Store for UI
-
-      if (detectionResult.isSuspicious) {
-        toast.error(
-          `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
-        );
+  // ------------------ SUBMIT BATCH ------------------
+async function handleCollectBatch() {
+  try {
+    // Step 1: Validate
+    for (const h of herbs) {
+      if (!h.name) {
+        toast.error("❌ Please select a herb for each entry.");
         return;
       }
+      if (h.name === "Other" && !h.otherHerb.trim()) {
+        toast.error("❌ Please enter herb name for 'Other'.");
+        return;
+      }
+      if (!h.geo.trim()) {
+        toast.error("❌ Please fetch location for all herbs.");
+        return;
+      }
+    }
 
-      // Step 3: Save to DB
-      const res = await fetch("/api/addHerbBatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    const finalBatchId = generateBatchId();
+    const formattedHerbs = herbs.map((h) => ({
+      name: h.name === "Other" ? h.otherHerb : h.name,
+      geo: h.geo,
+    }));
+
+    // Step 2: Anomaly Detection
+    const userIP = await fetch("https://api.ipify.org?format=json").then((r) =>
+      r.json()
+    );
+
+    const detectionRes = await fetch("/api/anomaly-detection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        batchId: finalBatchId,
+        herbs: formattedHerbs,
+        collector: session?.user?.email || "Anonymous",
+        ipAddress: userIP.ip,
+        deviceInfo: {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          language: navigator.language,
+        },
+        claimedLocation: {
+          lat: herbs[0].lat,
+          lon: herbs[0].lon,
+          country: herbs[0].country,
+          state: herbs[0].state,
+        },
+      }),
+    });
+
+    if (!detectionRes.ok) throw new Error("Anomaly detection failed");
+    const detectionResult = await detectionRes.json();
+    setVerificationResult(detectionResult);
+
+    if (detectionResult.isSuspicious) {
+      toast.error(
+        `❌ Suspicious batch detected! Risk: ${detectionResult.riskLevel}`
+      );
+      return;
+    }
+
+    // Step 3: Save to DB
+    const res = await fetch("/api/addHerbBatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        batchId: finalBatchId,
+        herbs: formattedHerbs,
+        collector: session?.user?.email || "Anonymous",
+        anomalyCheck: detectionResult,
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to save batch in MongoDB");
+
+    // Step 4: Blockchain (optional)
+    try {
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const contract = await getWriteContract();
+      const tx = await contract.createBatch(
+        finalBatchId,
+        computeBatchHash({
           batchId: finalBatchId,
           herbs: formattedHerbs,
           collector: session?.user?.email || "Anonymous",
-          anomalyCheck: detectionResult,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to save batch in MongoDB");
-
-      // Step 4: Blockchain (optional)
-      try {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const contract = await getWriteContract();
-        const tx = await contract.createBatch(
-          finalBatchId,
-          computeBatchHash({
-            batchId: finalBatchId,
-            herbs: formattedHerbs,
-            collector: session?.user?.email || "Anonymous",
-          })
-        );
-        await tx.wait();
-      } catch {
-        toast("🌿 Saved");
-      }
-
-      // Step 5: UI success
-      setBatchId(finalBatchId);
-      toast.success("🌿 Herbs batch submitted successfully!");
-      setProgress(1);
-      setReportReady(false);
-      simulateProgress();
-    } catch (err) {
-      console.error("Error details:", err);
-      toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
+        })
+      );
+      await tx.wait();
+    } catch {
+      toast("🌿 Saved");
     }
+
+    // ✅ Step 5: Reset states & show new batch
+    setBatchId(finalBatchId);                     // new QR value
+    setProgress(1);
+    setReportReady(false);
+    setVerificationResult(null);                  // clear old verification
+    setHerbs([{ name: "", otherHerb: "", geo: "" }]); // reset form
+
+    toast.success("🌿 Herbs batch submitted successfully!");
+    simulateProgress();
+  } catch (err) {
+    console.error("Error details:", err);
+    toast.error("❌ Error collecting batch: " + (err?.reason || err?.message));
   }
+}
+
 
   function simulateProgress() {
     setTimeout(() => setProgress(2), 2000);
@@ -380,14 +385,16 @@ export default function ImportPage() {
               🆔 Batch ID: <span className="font-mono">{batchId}</span>
             </p>
             <div className="mt-4 flex justify-center">
-              <QRCodeCanvas
-                value={`${window.location.origin}/batches/${batchId}`}
-                size={160}
-                bgColor="#ffffff"
-                fgColor="#166534"
-                level="H"
-                includeMargin={true}
-              />
+            <QRCodeCanvas
+  key={batchId}  
+  value={`${window.location.origin}/batches/${batchId}`}
+  size={160}
+  bgColor="#ffffff"
+  fgColor="#166534"
+  level="H"
+  includeMargin={true}
+/>
+
             </div>
             <p className="mt-2 text-sm text-gray-600">
               📱 Scan this QR to retrieve all herbs in this batch
